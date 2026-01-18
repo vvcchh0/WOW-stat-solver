@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WoW Stat Solver | v12.0 Final Fix</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- KaTeX -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;600;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --bg-dark: #0f172a;
+        --panel-bg: #1e293b;
+        --input-bg: #020617;
+        --border-col: #334155;
+        --accent: #3b82f6;
+
+        /* Stat Colors */
+        --c-crit: #ef4444;
+        --c-haste: #22c55e;
+        --c-mast: #a855f7;
+        --c-vers: #3b82f6;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: var(--bg-dark);
+        color: #cbd5e1;
+      }
+
+      .mono {
+        font-family: "JetBrains Mono", monospace;
+      }
+
+      .glass-panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--border-col);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+      }
+
+      /* Compact Inputs */
+      .tiny-input {
+        background: var(--input-bg);
+        border: 1px solid var(--border-col);
+        color: #e2e8f0;
+        padding: 2px 4px;
+        font-size: 0.75rem;
+        border-radius: 3px;
+        font-family: "JetBrains Mono", monospace;
+        transition: all 0.2s;
+      }
+
+      .tiny-input:focus {
+        border-color: var(--accent);
+        outline: none;
+        background: #0f172a;
+      }
+
+      .tiny-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .allocated-input {
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid var(--border-col);
+        color: #f1f5f9;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 800;
+        font-size: 1.5rem;
+        text-align: right;
+        transition: all 0.2s;
+        padding: 0;
+        width: 100%;
+        line-height: 1.2;
+      }
+
+      .allocated-input:focus {
+        outline: none;
+        border-bottom-color: var(--accent);
+      }
+
+      .allocated-input:disabled {
+        border-bottom-style: none;
+        color: #ffffff;
+      }
+
+      /* Custom Input Wrapper */
+      .custom-input-wrapper {
+        background-color: transparent;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #334155;
+        transition: border-color 0.2s;
+        padding-bottom: 2px;
+      }
+
+      .custom-input-wrapper:focus-within {
+        border-bottom-color: var(--accent);
+      }
+
+      .custom-input-clean {
+        background: transparent;
+        border: none;
+        color: #e2e8f0;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9rem;
+        font-weight: bold;
+        padding: 0;
+        width: 100%;
+        text-align: right;
+      }
+
+      .custom-input-clean:focus {
+        outline: none;
+      }
+
+      .base-prefix {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        font-weight: normal;
+        color: #64748b;
+        margin-right: 4px;
+        user-select: none;
+        white-space: nowrap;
+      }
+
+      .katex-formula-container {
+        font-size: 0.9rem;
+        color: #94a3b8;
+        font-weight: 500;
+        display: flex;
+        align-items: flex-end;
+        padding-bottom: 6px;
+        height: 36px;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      .katex-formula-container::-webkit-scrollbar {
+        display: none;
+      }
+
+      .katex {
+        color: inherit !important;
+        font-family: "JetBrains Mono", serif;
+      }
+
+      /* Modal Overlay */
+      .modal-overlay {
+        background-color: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(4px);
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--bg-dark);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 3px;
+      }
+
+      .stat-header-c {
+        border-top: 4px solid var(--c-crit);
+      }
+
+      .stat-header-h {
+        border-top: 4px solid var(--c-haste);
+      }
+
+      .stat-header-m {
+        border-top: 4px solid var(--c-mast);
+      }
+
+      .stat-header-v {
+        border-top: 4px solid var(--c-vers);
+      }
+
+      .panel-percent-badge {
+        font-size: 0.7rem;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1px 4px;
+        border-radius: 3px;
+        color: #cbd5e1;
+        font-family: "JetBrains Mono";
+      }
+    </style>
+  </head>
+
+  <body class="h-screen flex flex-col overflow-hidden text-sm">
+    <!-- Header -->
+    <header
+      class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 lg:px-6 shrink-0 z-50 relative"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-500"
+        >
+          <i class="fa-solid fa-calculator"></i>
+        </div>
+        <div>
+          <h1
+            class="font-bold text-gray-100 tracking-tight text-lg leading-none"
+            data-i18n="app_title"
+          >
+            WoW Stat Solver
+          </h1>
+          <div
+            class="text-[10px] text-gray-500 mt-0.5"
+            data-i18n="app_subtitle"
+          >
+            Greedy Algorithm & Segmented Fit
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <!-- New SimC Import Button -->
+        <button
+          id="btnSimImport"
+          onclick="openSimImportModal()"
+          class="text-xs bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-500 font-bold border border-emerald-600/50 px-3 py-1.5 rounded transition flex items-center gap-2"
+        >
+          <i class="fa-solid fa-file-csv"></i>
+          <span data-i18n="sim_import_btn">Import Sim Data</span>
+        </button>
+
+        <!-- File System -->
+        <button
+          id="btnExport"
+          onclick="ConfigManager.export()"
+          class="text-xs bg-amber-700/20 hover:bg-amber-700/40 text-amber-500 font-bold border border-amber-700/50 px-3 py-1.5 rounded transition flex items-center gap-2"
+        >
+          <i class="fa-solid fa-file-export"></i>
+          <span data-i18n="export_btn">Export</span>
+        </button>
+        <label
+          class="text-xs bg-amber-700/20 hover:bg-amber-700/40 text-amber-500 font-bold border border-amber-700/50 px-3 py-1.5 rounded transition flex items-center gap-2 cursor-pointer"
+        >
+          <i class="fa-solid fa-file-import"></i>
+          <span data-i18n="import_btn">Import</span>
+          <input
+            type="file"
+            id="btnImport"
+            class="hidden"
+            accept=".txt"
+          />
+        </label>
+
+        <div class="w-[1px] bg-slate-700 h-6 mx-1"></div>
+
+        <button
+          id="btnTraj"
+          class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500 px-3 py-1.5 rounded transition font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-500/20"
+        >
+          <i class="fa-solid fa-chart-line"></i>
+          <span data-i18n="traj_btn">Trajectory</span>
+        </button>
+        <button
+          id="langToggle"
+          class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 px-3 py-1.5 rounded transition font-bold flex items-center gap-1.5"
+        >
+          <i class="fa-solid fa-globe"></i> <span id="langLabel">EN</span>
+        </button>
+        <button
+          id="btnReset"
+          class="text-xs bg-slate-800 hover:bg-slate-700 text-gray-400 border border-slate-700 px-3 py-1.5 rounded transition flex items-center gap-1"
+        >
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Layout -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-0">
+      <!-- LEFT: Controls & Stat Logic -->
+      <main
+        class="flex-1 overflow-y-auto p-4 lg:p-6 bg-[#0b1121] scroll-smooth relative"
+      >
+        <!-- Global Budget -->
+        <div
+          class="glass-panel p-5 rounded-xl mb-6 flex flex-col md:flex-row items-center gap-6 sticky top-0 z-50 bg-[#1e293b]/95 backdrop-blur shadow-xl border border-slate-700 ring-1 ring-white/5"
+        >
+          <div class="w-full md:w-auto flex-1">
+            <div class="flex justify-between mb-2">
+              <label
+                class="text-xs font-bold text-gray-300 uppercase tracking-wide flex items-center gap-2"
+              >
+                <i class="fa-solid fa-coins text-yellow-500"></i>
+                <span data-i18n="pool_label">Total Rating Pool</span>
+              </label>
+              <div class="flex items-baseline gap-2">
+                <span class="text-xs text-gray-500" data-i18n="remaining_label"
+                  >Remaining:</span
+                >
+                <span
+                  class="text-lg font-mono text-white font-bold"
+                  id="budgetDisplay"
+                  >28,000</span
+                >
+              </div>
+            </div>
+            <input
+              type="range"
+              id="budgetSlider"
+              min="5000"
+              max="60000"
+              step="100"
+              value="28000"
+              class="w-full accent-indigo-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer border border-slate-700"
+            />
+          </div>
+          <div class="w-32 shrink-0">
+            <input
+              type="number"
+              id="budgetInput"
+              value="28000"
+              class="tiny-input w-full text-right text-base py-2 font-bold text-white border-slate-600 bg-slate-800 rounded focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 pb-20 relative z-0">
+          <div id="container_c"></div>
+          <div id="container_h"></div>
+          <div id="container_m"></div>
+          <div id="container_v"></div>
+        </div>
+
+        <div
+          class="text-[10px] text-gray-600 mt-4 text-center pb-8 border-t border-slate-800 pt-4 font-mono"
+        >
+          Model: $Gain = a_2 \cdot x^2 + a_1 \cdot x + a_0$ (Segmented)
+        </div>
+      </main>
+
+      <!-- RIGHT: Dashboard -->
+      <aside
+        class="w-full lg:w-96 bg-[#0f172a] border-l border-slate-800 flex flex-col shrink-0 overflow-hidden relative z-40 shadow-2xl"
+      >
+        <!-- MODE TOGGLE -->
+        <div class="px-6 pt-4 pb-0 flex justify-end items-center gap-2">
+          <span
+            class="text-[10px] font-bold text-gray-500 uppercase"
+            data-i18n="mode_label"
+            >Mode</span
+          >
+          <div class="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
+            <button
+              onclick="setMode('gain')"
+              id="btn-mode-gain"
+              class="px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white"
+            >
+              GAIN
+            </button>
+            <button
+              onclick="setMode('total')"
+              id="btn-mode-total"
+              class="px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white"
+            >
+              TOTAL
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. THEORETICAL SECTION -->
+        <div class="p-6 border-b border-slate-800 bg-[#151e32] flex-shrink-0">
+          <div class="mb-4">
+            <h3
+              class="text-[10px] uppercase tracking-widest font-bold text-emerald-500 mb-1"
+              data-i18n="max_score_title"
+            >
+              Theoretical Max
+            </h3>
+            <div
+              class="text-3xl font-bold text-white mono tracking-tighter"
+              id="maxScore"
+            >
+              0.00
+            </div>
+            <div
+              class="text-[10px] text-gray-500 mt-1"
+              data-i18n="max_score_desc"
+            >
+              Based on optimal multipliers
+            </div>
+          </div>
+
+          <div>
+            <div
+              class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2"
+            >
+              <h3
+                class="text-[10px] uppercase tracking-widest font-bold text-blue-400"
+                data-i18n="opt_dist_title"
+              >
+                Optimal Distribution
+              </h3>
+              <span class="text-[9px] text-gray-500 font-mono mode-label-text"
+                >ALLOCATED RATING</span
+              >
+            </div>
+            <div class="h-44 relative w-full flex justify-center">
+              <canvas id="distChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. CUSTOM / CURRENT SECTION -->
+        <div class="flex-1 overflow-y-auto p-6 bg-[#0f172a]">
+          <div
+            class="flex justify-between items-center mb-4 border-b border-slate-800 pb-2"
+          >
+            <h3
+              class="text-[10px] uppercase tracking-widest font-bold text-orange-400"
+            >
+              <i class="fa-solid fa-pen-to-square mr-1"></i>
+              <span data-i18n="custom_title">Custom Build</span>
+            </h3>
+            <button
+              onclick="syncOptimal()"
+              class="text-[10px] text-indigo-400 hover:text-white transition-colors bg-indigo-900/30 px-2 py-1 rounded border border-indigo-900/50 hover:border-indigo-500"
+            >
+              <i class="fa-solid fa-arrow-down"></i>
+              <span data-i18n="sync_btn">Sync</span>
+            </button>
+          </div>
+
+          <!-- Custom Chart -->
+          <div class="mb-6">
+            <div class="h-32 relative w-full flex justify-center">
+              <canvas id="customDistChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Inputs -->
+          <div
+            class="space-y-4 bg-slate-900/50 p-4 rounded-lg border border-slate-800 mb-4"
+          >
+            <!-- Stats Rows generated by JS -->
+            <div id="customInputsContainer" class="space-y-3"></div>
+
+            <div
+              class="border-t border-slate-700 mt-2 pt-2 flex justify-between items-center"
+            >
+              <span
+                class="text-[10px] text-gray-500 uppercase font-bold"
+                data-i18n="custom_sum"
+                >Total Sum</span
+              >
+              <span
+                class="text-sm font-mono text-white font-bold"
+                id="currTotal"
+                >0</span
+              >
+            </div>
+          </div>
+
+          <!-- Custom Yield -->
+          <div class="mt-6">
+            <h3
+              class="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-2"
+              data-i18n="custom_yield"
+            >
+              Custom Yield
+            </h3>
+            <div class="flex justify-between items-end mb-2">
+              <span
+                class="font-mono text-xl font-bold text-white"
+                id="currYield"
+                >0.00</span
+              >
+              <span class="text-sm font-bold font-mono" id="yieldDiff"
+                >-0.0%</span
+              >
+            </div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div
+                id="yieldBar"
+                class="bg-blue-500 h-full w-0 transition-all duration-300"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- SimC Import Modal -->
+    <div
+      id="simImportModal"
+      class="fixed inset-0 modal-overlay z-[100] hidden flex items-center justify-center p-4 transition-opacity duration-200"
+    >
+      <div
+        class="bg-[#1e293b] rounded-xl shadow-2xl w-full max-w-5xl border border-slate-600 transform transition-all scale-95 opacity-0 flex flex-col max-h-[90vh]"
+        id="simImportContent"
+      >
+        <div
+          class="p-5 border-b border-slate-700 flex justify-between items-center bg-[#151e32] rounded-t-xl shrink-0"
+        >
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-file-csv text-emerald-500"></i>
+            <span data-i18n="sim_import_title">Import SimC Data</span>
+          </h3>
+          <button
+            onclick="closeSimImportModal()"
+            class="text-gray-400 hover:text-white"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6">
+          <!-- Left: Controls -->
+          <div class="w-full lg:w-1/3 space-y-5 shrink-0 flex flex-col">
+            <p class="text-xs text-gray-400">
+              Upload `dps_plot` text/csv. <br />
+              <span class="text-indigo-400">Logic:</span>
+              Intervals auto-calculated based on DR tiers relative to Base.
+            </p>
+
+            <!-- Base Settings Grid (Replaced single target selector) -->
+            <div
+              class="space-y-3 bg-[#0b1121] p-3 rounded border border-slate-700"
+            >
+              <label
+                class="block text-xs font-bold text-gray-400 uppercase border-b border-slate-700 pb-1 mb-2"
+                >Sim Base Ratings</label
+              >
+              <div class="grid grid-cols-2 gap-2" id="simBaseInputs">
+                <!-- Generated -->
+              </div>
+            </div>
+
+            <label
+              class="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 transition"
+            >
+              <div
+                class="flex flex-col items-center justify-center text-center"
+              >
+                <i
+                  class="fa-solid fa-cloud-arrow-up text-xl text-slate-500 mb-1"
+                ></i>
+                <p class="text-xs text-gray-400">Click to Upload Data</p>
+              </div>
+              <input
+                id="simFileInput"
+                type="file"
+                class="hidden"
+                accept=".txt,.csv"
+                onchange="
+                  handleSimFileSelect(this);
+                  this.value = '';
+                "
+              />
+            </label>
+
+            <div
+              id="importLog"
+              class="text-[10px] font-mono text-gray-500 h-24 overflow-y-auto border border-slate-800 p-2 rounded bg-slate-900/50 flex-1"
+            >
+              Waiting for file...
+            </div>
+          </div>
+
+          <!-- Right: Analysis & Chart -->
+          <div class="flex-1 flex flex-col gap-4">
+            <!-- Chart -->
+            <div
+              class="bg-[#0f172a] rounded-lg border border-slate-700 p-4 flex flex-col h-[350px] relative"
+            >
+              <div class="flex justify-between items-center mb-2">
+                <h4
+                  class="text-xs font-bold text-gray-400 uppercase tracking-widest"
+                >
+                  Multi-Stat Fit Preview
+                </h4>
+                <!-- Stat selector for preview -->
+                <select
+                  id="previewStatSelect"
+                  class="bg-[#1e293b] border border-slate-600 text-[10px] text-white rounded px-2 py-1 outline-none"
+                  onchange="ChartManager.updateSimPreviewChart()"
+                >
+                  <!-- Populated after load -->
+                </select>
+              </div>
+              <div class="flex-1 relative w-full overflow-hidden">
+                <canvas id="simPreviewChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Fit Results Table -->
+            <div
+              class="bg-[#0f172a] rounded-lg border border-slate-700 p-3 flex-1 overflow-y-auto max-h-40"
+            >
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr
+                    class="text-[9px] text-gray-500 uppercase border-b border-slate-800"
+                  >
+                    <th class="py-1 px-2">Interval</th>
+                    <th class="py-1 px-2">Function ($R^2$)</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="simFitTable"
+                  class="text-[10px] font-mono text-gray-300"
+                >
+                  <tr>
+                    <td colspan="2" class="text-center py-4 text-gray-600">
+                      No data loaded
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="p-4 border-t border-slate-700 bg-[#151e32] rounded-b-xl flex justify-end gap-3 shrink-0"
+        >
+          <button
+            id="btnApplySim"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded text-xs transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            <span data-i18n="import_process_btn">Apply Results</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trajectory Modal -->
+    <div
+      id="trajectoryModal"
+      class="fixed inset-0 modal-overlay z-[100] hidden flex items-center justify-center p-4 lg:p-10 transition-opacity duration-300"
+    >
+      <div
+        class="bg-[#1e293b] rounded-xl shadow-2xl w-full max-w-6xl border border-slate-600 flex flex-col h-[90vh] animate-fade-in-up"
+      >
+        <div
+          class="p-5 border-b border-slate-700 flex justify-between items-center bg-[#151e32] rounded-t-xl shrink-0"
+        >
+          <h3 class="text-xl font-bold text-white flex items-center gap-3">
+            <i class="fa-solid fa-arrow-trend-up text-indigo-500"></i>
+            <span data-i18n="traj_modal_title"
+              >Growth Trajectory Simulation</span
+            >
+          </h3>
+          <button
+            onclick="closeTrajectoryModal()"
+            class="text-gray-400 hover:text-white hover:bg-slate-700/50 w-8 h-8 flex items-center justify-center rounded-full transition"
+          >
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+        <div
+          class="flex-1 p-4 lg:p-6 relative bg-[#0f172a] overflow-hidden overflow-y-auto space-y-8"
+        >
+          <!-- Charts -->
+          <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-800">
+            <div
+              class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2"
+            >
+              <h4
+                class="text-sm font-bold text-purple-400 uppercase tracking-widest"
+              >
+                <i class="fa-solid fa-percent mr-2"></i>绿字成长路线 (%)
+              </h4>
+            </div>
+            <div class="h-[250px] w-full relative">
+              <canvas id="percentTrajChart"></canvas>
+            </div>
+          </div>
+          <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-800">
+            <div
+              class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2"
+            >
+              <h4
+                class="text-sm font-bold text-blue-400 uppercase tracking-widest"
+              >
+                <i class="fa-solid fa-code-branch mr-2"></i>绿字分配路线
+                (Rating)
+              </h4>
+            </div>
+            <div class="h-[250px] w-full relative">
+              <canvas id="trajChart"></canvas>
+            </div>
+          </div>
+          <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-800">
+            <div
+              class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2"
+            >
+              <h4
+                class="text-sm font-bold text-yellow-500 uppercase tracking-widest"
+              >
+                <i class="fa-solid fa-seedling mr-2"></i>总收益增长曲线 (Total
+                Yield)
+              </h4>
+            </div>
+            <div class="h-[250px] w-full relative">
+              <canvas id="yieldTrajChart"></canvas>
+            </div>
+          </div>
+          <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-800">
+            <div
+              class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2"
+            >
+              <h4
+                class="text-sm font-bold text-cyan-400 uppercase tracking-widest"
+              >
+                <i class="fa-solid fa-wave-square mr-2"></i>边际收益变化
+                (Marginal Delta)
+              </h4>
+            </div>
+            <div class="h-[250px] w-full relative">
+              <canvas id="deltaTrajChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Base Setting Modal -->
+    <div
+      id="baseModal"
+      class="fixed inset-0 modal-overlay z-[100] hidden flex items-center justify-center p-6 transition-opacity duration-200"
+    >
+      <div
+        class="bg-[#1e293b] rounded-xl shadow-2xl w-full max-w-md border border-slate-600 transform transition-all scale-95 opacity-0"
+        id="baseModalContent"
+      >
+        <div
+          class="p-5 border-b border-slate-700 flex justify-between items-center bg-[#151e32] rounded-t-xl"
+        >
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-indigo-500"></i>
+            <span data-i18n="stat_base_label">SIM BASE RATING</span>
+          </h3>
+          <button
+            onclick="closeBaseModal()"
+            class="text-gray-400 hover:text-white"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-xs text-gray-400 mb-4" data-i18n="base_modal_desc">
+            Enter base rating.
+          </p>
+          <div id="base-inputs-container" class="space-y-3"></div>
+        </div>
+        <div
+          class="p-4 border-t border-slate-700 bg-[#151e32] rounded-b-xl flex justify-end"
+        >
+          <button
+            onclick="saveBaseSettings()"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-6 rounded text-xs transition shadow-lg shadow-indigo-500/20"
+          >
+            <span data-i18n="save_btn">Save & Recalculate</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat Card Template -->
+    <template id="stat-card-template">
+      <div
+        class="glass-panel rounded-xl overflow-hidden flex flex-col h-full shadow-lg transition-colors duration-300 relative z-0"
+      >
+        <!-- Header -->
+        <div
+          class="p-4 bg-[#1e293b] stat-header flex flex-col gap-3 relative overflow-hidden"
+        >
+          <i
+            class="fa-solid stat-bg-icon absolute -right-2 -top-2 text-6xl opacity-[0.03] text-white"
+          ></i>
+
+          <div class="flex justify-between items-center z-10">
+            <div class="flex items-center gap-2">
+              <h3
+                class="font-bold text-gray-100 text-base stat-name tracking-wide"
+              >
+                Stat
+              </h3>
+              <span class="panel-percent-badge hidden" title="Panel %">0%</span>
+            </div>
+            <div
+              class="flex items-center gap-1.5 bg-slate-900/80 px-2 py-1 rounded border border-slate-700 backdrop-blur-sm"
+            >
+              <input
+                type="checkbox"
+                class="lock-check rounded bg-slate-800 border-slate-600 text-indigo-500 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+              />
+              <label
+                class="text-[10px] text-gray-400 font-bold uppercase cursor-pointer select-none lock-label"
+                >LOCK</label
+              >
+            </div>
+          </div>
+
+          <div class="flex items-end justify-between w-full relative z-10 mt-1">
+            <div
+              class="katex-formula-container flex-1 overflow-hidden"
+              style="min-width: 0"
+            ></div>
+            <div class="flex flex-col items-end shrink-0 ml-4">
+              <label
+                class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 leading-none alloc-label"
+                >ALLOCATED</label
+              >
+              <div class="relative">
+                <input
+                  type="number"
+                  class="allocated-input lock-input w-32"
+                  disabled
+                />
+                <span
+                  class="text-[10px] text-gray-500 absolute right-0 -bottom-4 font-mono panel-percent-display"
+                  >--%</span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="h-3"></div>
+        </div>
+
+        <!-- Base Settings (Row) -->
+        <div
+          class="px-4 py-2 bg-[#0b1121] border-b border-slate-800 flex justify-between items-center"
+        >
+          <div
+            class="text-[10px] text-gray-400 font-bold uppercase flex items-center gap-1"
+          >
+            <span class="stat_base_label">SIM BASE RATING</span>
+            <i
+              class="fa-solid fa-circle-info text-[8px] text-slate-600"
+              title="Starting rating on gear during simulation"
+            ></i>
+          </div>
+          <div class="flex items-center gap-2">
+            <span
+              class="text-xs font-mono text-yellow-500 font-bold base-rating-display"
+              >0</span
+            >
+            <button
+              class="set-base-btn text-[10px] bg-slate-800 border border-slate-700 hover:bg-slate-700 text-indigo-300 px-2 py-0.5 rounded transition"
+            >
+              <i class="fa-solid fa-gear mr-1"></i>
+              <span class="set_btn_label">SET</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Config Grid -->
+        <div
+          class="px-4 py-3 bg-[#151e32] grid grid-cols-2 gap-4 border-b border-slate-800"
+        >
+          <div class="flex flex-col">
+            <label
+              class="text-[9px] text-gray-500 uppercase font-bold mb-1 base-label"
+              >BASE %</label
+            >
+            <input
+              type="number"
+              step="0.1"
+              class="tiny-input w-full base-input text-indigo-300 font-mono text-right"
+            />
+          </div>
+          <div class="flex flex-col">
+            <label
+              class="text-[9px] text-gray-500 uppercase font-bold mb-1 conv-label"
+              >1% CONV</label
+            >
+            <input
+              type="number"
+              step="10"
+              class="tiny-input w-full conv-input text-gray-400 font-mono text-right"
+            />
+          </div>
+        </div>
+
+        <!-- Intervals Header -->
+        <div
+          class="grid grid-cols-12 gap-1 px-3 pt-2 pb-1 text-[8px] text-gray-500 uppercase font-bold bg-[#0f172a]"
+        >
+          <div class="col-span-3 text-center card_cap">CAP</div>
+          <div class="col-span-2 text-center">a2 ($x^2$)</div>
+          <div class="col-span-3 text-center">a1 ($x$)</div>
+          <div class="col-span-3 text-center">a0 (b)</div>
+          <div class="col-span-1"></div>
+        </div>
+
+        <!-- Intervals -->
+        <div
+          class="p-2 space-y-1.5 intervals-list bg-[#0f172a]/40 flex-1 overflow-y-auto max-h-48 min-h-[100px]"
+        ></div>
+
+        <!-- Footer -->
+        <div
+          class="p-3 border-t border-slate-800 bg-[#1e293b] flex justify-between items-center"
+        >
+          <button
+            class="add-interval-btn text-[10px] font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-400 px-3 py-1.5 rounded transition flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-plus"></i>
+            <span class="add-label">ADD TIER</span>
+          </button>
+          <div class="text-right">
+            <div
+              class="text-[9px] text-gray-500 uppercase font-bold tracking-wider mult-label"
+            >
+              MULT
+            </div>
+            <span
+              class="text-sm font-mono font-bold text-white stat-mult-display"
+              >1.000</span
+            >
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+
+    <script src="js/solver.js"></script>
+    <script src="js/charts.js"></script>
+
+    <script src="js/main.js"></script>
+    
+  </body>
+</html>
