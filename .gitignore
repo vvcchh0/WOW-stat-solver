@@ -38,3 +38,8 @@ Desktop.ini
 # Gemini Agent temp files
 .gemini/
 tmp/
+
+# Large binaries and Logs
+*.zip
+*Errors.txt
+*.log

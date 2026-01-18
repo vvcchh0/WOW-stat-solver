@@ -4,6 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 A specialized calculator utilizing **Greedy Algorithm** and **Segmented Fitting** (Linear/Quadratic) to calculate the optimal secondary stat distribution for World of Warcraft.
+注：这一版完全由AI生成，后面会做一些手改
 
 [中文说明](#中文说明) | [English](#english)
 
