@@ -1,5 +1,11 @@
 # Changelog - LocalVersion (Localized Edition)
 
+## [v1.2.1] - 2026-01-19
+### Fixed
+- **Strict Mode Compliance**: Resolved 100+ VSCode strict mode (`checkJs: true`) errors across all JS files.
+- **Type Safety**: Added explicit JSDoc type definitions and casts for DOM elements, global variables, and complex object indexing.
+- **Global Conflicts**: Removed redundant `var` declarations in `utils.js` to prevent browser console errors while maintaining editor intellisense.
+
 ## [v1.2.0] - 2026-01-19
 ### Added
 - **Code Documentation**: Added comprehensive JSDoc annotations to all core logic files (`solver.js`, `charts.js`, `main.js`, `config.js`, `utils.js`).

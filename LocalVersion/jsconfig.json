@@ -2,9 +2,9 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "ESNext",
-    "checkJs": false,
+    "checkJs": true,
     "lib": ["es2020", "dom", "dom.iterable"],
-    "strict": false,
+    "strict": true,
     "baseUrl": "./js"
   },
   "include": ["js/**/*"],

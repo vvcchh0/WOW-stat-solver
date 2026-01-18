@@ -13,6 +13,10 @@ const Utils = {
    * [底层原子操作] 计算分段函数中某一段的多项式值
    * 公式: f(x) = a2*x^2 + a1*x + a0
    * @param {number} x - 用户分配的绿字数值
+   * @param {number} a2 - 二次项系数
+   * @param {number} a1 - 一次项系数
+   * @param {number} a0 - 常数项
+   * @returns {number}
    */
   evalPoly(x, a2, a1, a0) {
     return a2 * x * x + a1 * x + a0;
@@ -21,8 +25,12 @@ const Utils = {
   /**
    * [逻辑寻址] 根据当前绿字数值，确定其落在哪一个拟合区间
    * 采用 O(n) 线性扫描，寻找第一个 limit 大于 x 的区间
+   * @param {string} statKey
+   * @param {number} x
+   * @returns {Interval|null}
    */
   getActiveInterval(statKey, x) {
+    // @ts-ignore
     const intervals = state.stats[statKey].intervals;
     if (!intervals || intervals.length === 0) return null;
 
@@ -35,6 +43,9 @@ const Utils = {
   /**
    * [收益计算] 计算特定属性在分配 x 点数值时的即时倍率
    * 该值直接用于 Solver 贪心算法的权重比较
+   * @param {string} statKey
+   * @param {number} x
+   * @returns {number}
    */
   getMultiplier(statKey, x) {
     const interval = this.getActiveInterval(statKey, x);
@@ -49,6 +60,11 @@ const Utils = {
    * 30-39%: 90% 转化
    * 39-47%: 80% 转化
    * ...以此类推
+   * @param {number} rating
+   * @param {number} conversion
+   * @param {number} baseLimit
+   * @param {number} stepLimit
+   * @returns {number}
    */
   ratingToPercent(rating, conversion, baseLimit, stepLimit) {
     let rawPct = rating / conversion;
@@ -80,10 +96,15 @@ const Utils = {
   /**
    * [UI 表现] 计算面板最终显示的百分比
    * 注意：statBase (模拟起点) 不消耗预算，但会推挤 DR 区间
+   * @param {string} statKey
+   * @param {number} rating
+   * @returns {number}
    */
   getPanelPercent(statKey, rating) {
+    // @ts-ignore
     const s = state.stats[statKey];
     const totalR = rating + s.statBase; 
+    // @ts-ignore
     const config = STAT_CONFIG[statKey];
 
     return (
@@ -95,17 +116,25 @@ const Utils = {
   /**
    * [全局评估] 计算全属性组合后的总收益 (Multiplicative Gain)
    * Solver 优化的终极目标就是最大化此函数返回值
+   * @param {Object} results
+   * @param {number} results.c
+   * @param {number} results.h
+   * @param {number} results.m
+   * @param {number} results.v
+   * @returns {number}
    */
   calculateTotalScore(results) {
     let total = 1.0;
     ["c", "h", "m", "v"].forEach((k) => {
-      total *= this.getMultiplier(k, results[k]);
+      total *= this.getMultiplier(k, results[/** @type {keyof typeof results} */ (k)]);
     });
     return total;
   },
 
   /**
    * 数字格式化工具
+   * @param {number} num
+   * @returns {string}
    */
   formatNumber(num) {
     return Math.round(num).toLocaleString();

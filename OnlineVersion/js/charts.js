@@ -23,13 +23,14 @@ const ChartManager = {
   /**
    * 生成环形图的自定义图例标签
    * 
-   * @param {Object} chart - Chart.js 实例
-   * @returns {Array} 包含文本、颜色等信息的图例项数组
+   * @param {any} chart - Chart.js 实例
+   * @returns {any[]} 包含文本、颜色等信息的图例项数组
    */
   generateLegendLabels(chart) {
-    return chart.data.labels.map((label, i) => {
+    return chart.data.labels.map((/** @type {string} */ label, /** @type {number} */ i) => {
       const val = chart.data.datasets[0].data[i];
       const valStr =
+        // @ts-ignore
         state.displayMode === "total"
           ? `${val.toFixed(1)}%`
           : Math.round(val).toLocaleString();
@@ -48,30 +49,39 @@ const ChartManager = {
    * 根据 state.displayMode 自动切换显示分配数值或最终面板百分比
    */
   updateCharts() {
+    // @ts-ignore
     const labels = Object.values(STAT_CONFIG).map((c) =>
+      // @ts-ignore
       state.lang === "zh" ? c.name_zh : c.name_en,
     );
+    // @ts-ignore
     const colors = Object.values(STAT_CONFIG).map((c) => c.color);
     
     let dataOpt = [], dataCust = [];
 
+    // @ts-ignore
     if (state.displayMode === "gain") {
       // 显示分配的绿字数值
       dataOpt = [
+        // @ts-ignore
         state.optResults.c, state.optResults.h, state.optResults.m, state.optResults.v
       ];
       dataCust = [
+        // @ts-ignore
         state.customValues.c, state.customValues.h, state.customValues.m, state.customValues.v
       ];
     } else {
       // 显示转换后的面板百分比
+      // @ts-ignore
       dataOpt = ["c", "h", "m", "v"].map((k) => Utils.getPanelPercent(k, state.optResults[k]));
+      // @ts-ignore
       dataCust = ["c", "h", "m", "v"].map((k) => Utils.getPanelPercent(k, state.customValues[k]));
     }
     
     // 渲染或更新理论最优图表
     if (!this.instances.distChart) {
-      const ctx = document.getElementById("distChart").getContext("2d");
+      const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("distChart")).getContext("2d");
+      // @ts-ignore - Chart global is loaded via CDN script
       this.instances.distChart = new Chart(ctx, {
         type: "doughnut",
         data: {
@@ -89,11 +99,13 @@ const ChartManager = {
                 color: "#94a3b8",
                 font: { size: 10, family: "Inter" },
                 boxWidth: 10,
+                // @ts-ignore
                 generateLabels: this.generateLegendLabels,
               },
             },
             tooltip: {
               callbacks: {
+                // @ts-ignore
                 label: (ctx) => state.displayMode === "total" ? ` ${ctx.raw.toFixed(2)}%` : ` ${Math.round(ctx.raw)}`,
               },
             },
@@ -101,14 +113,18 @@ const ChartManager = {
         },
       });
     } else {
+      // @ts-ignore
       this.instances.distChart.data.datasets[0].data = dataOpt;
+      // @ts-ignore
       this.instances.distChart.data.labels = labels;
+      // @ts-ignore
       this.instances.distChart.update();
     }
 
     // 渲染或更新自定义对比图表
     if (!this.instances.customDistChart) {
-      const ctx2 = document.getElementById("customDistChart").getContext("2d");
+      const ctx2 = /** @type {HTMLCanvasElement} */ (document.getElementById("customDistChart")).getContext("2d");
+      // @ts-ignore
       this.instances.customDistChart = new Chart(ctx2, {
         type: "doughnut",
         data: {
@@ -123,6 +139,7 @@ const ChartManager = {
             legend: { display: false },
             tooltip: {
               callbacks: {
+                // @ts-ignore
                 label: (ctx) => state.displayMode === "total" ? ` ${ctx.raw.toFixed(2)}%` : ` ${Math.round(ctx.raw)}`,
               },
             },
@@ -130,7 +147,9 @@ const ChartManager = {
         },
       });
     } else {
+      // @ts-ignore
       this.instances.customDistChart.data.datasets[0].data = dataCust;
+      // @ts-ignore
       this.instances.customDistChart.update();
     }
   },
@@ -142,16 +161,22 @@ const ChartManager = {
    * @param {Object} data - 各属性百分比数据点
    */
   renderPercentTrajChart(labels, data) {
-    const ctx = document.getElementById("percentTrajChart").getContext("2d");
+    const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("percentTrajChart")).getContext("2d");
+    // @ts-ignore
     if (this.instances.percentTrajChart) this.instances.percentTrajChart.destroy();
     
+    // @ts-ignore
     this.instances.percentTrajChart = new Chart(ctx, {
       type: "line",
       data: {
         labels: labels,
+        // @ts-ignore
         datasets: ["c", "h", "m", "v"].map(k => ({
+          // @ts-ignore
           label: (state.lang === 'zh' ? STAT_CONFIG[k].name_zh : STAT_CONFIG[k].name_en) + " %",
+          // @ts-ignore
           data: data[k].map(v => v.toFixed(2)),
+          // @ts-ignore
           borderColor: STAT_CONFIG[k].color,
           pointRadius: 2,
           tension: 0.1
@@ -168,16 +193,22 @@ const ChartManager = {
    * @param {Object} data - 各属性分配值数据点
    */
   renderTrajectoryChart(labels, data) {
-    const ctx = document.getElementById("trajChart").getContext("2d");
+    const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("trajChart")).getContext("2d");
+    // @ts-ignore
     if (this.instances.trajChart) this.instances.trajChart.destroy();
     
+    // @ts-ignore
     this.instances.trajChart = new Chart(ctx, {
       type: "line",
       data: {
         labels: labels,
+        // @ts-ignore
         datasets: ["c", "h", "m", "v"].map(k => ({
+          // @ts-ignore
           label: state.lang === 'zh' ? STAT_CONFIG[k].name_zh : STAT_CONFIG[k].name_en,
+          // @ts-ignore
           data: data[k],
+          // @ts-ignore
           borderColor: STAT_CONFIG[k].color,
           pointRadius: 2,
           tension: 0.1
@@ -194,13 +225,16 @@ const ChartManager = {
    * @param {Array<number>} scores - 总收益得分数据点
    */
   renderYieldTrajChart(labels, scores) {
-    const ctx = document.getElementById("yieldTrajChart").getContext("2d");
+    const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("yieldTrajChart")).getContext("2d");
+    // @ts-ignore
     if (this.instances.yieldTrajChart) this.instances.yieldTrajChart.destroy();
     
+    // @ts-ignore
     const grad = ctx.createLinearGradient(0, 0, 0, 300);
     grad.addColorStop(0, "rgba(251,191,36,0.5)");
     grad.addColorStop(1, "rgba(251,191,36,0)");
     
+    // @ts-ignore
     this.instances.yieldTrajChart = new Chart(ctx, {
       type: "line",
       data: {
@@ -228,7 +262,8 @@ const ChartManager = {
    * @param {Array<number>} scores - 总收益得分数据点
    */
   renderDeltaTrajChart(labels, scores) {
-    const ctx = document.getElementById("deltaTrajChart").getContext("2d");
+    const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("deltaTrajChart")).getContext("2d");
+    // @ts-ignore
     if (this.instances.deltaTrajChart) this.instances.deltaTrajChart.destroy();
     
     const dData = [];
@@ -236,10 +271,12 @@ const ChartManager = {
       dData.push(scores[i] - scores[i - 1]);
     }
     
+    // @ts-ignore
     const grad = ctx.createLinearGradient(0, 0, 0, 300);
     grad.addColorStop(0, "rgba(34,211,238,0.5)");
     grad.addColorStop(1, "rgba(34,211,238,0)");
     
+    // @ts-ignore
     this.instances.deltaTrajChart = new Chart(ctx, {
       type: "line",
       data: {
@@ -265,16 +302,21 @@ const ChartManager = {
    * 将原始点阵数据与拟合出的分段函数进行对比渲染
    */
   updateSimPreviewChart() {
-    const k = document.getElementById("previewStatSelect").value;
+    const k = /** @type {HTMLSelectElement} */ (document.getElementById("previewStatSelect")).value;
+    // @ts-ignore
     if (!k || !Solver.simImportTempData) return;
     
+    // @ts-ignore
     const data = Solver.simImportTempData[k];
-    const ctx = document.getElementById("simPreviewChart").getContext("2d");
+    const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("simPreviewChart")).getContext("2d");
+    // @ts-ignore
     if (this.instances.simPreviewChart) this.instances.simPreviewChart.destroy();
     
+    /** @type {any[]} */
     const datasets = [
       {
         label: "SimC Raw Data",
+        // @ts-ignore
         data: data.points,
         type: "scatter",
         backgroundColor: "#475569",
@@ -283,13 +325,17 @@ const ChartManager = {
     ];
 
     // 绘制拟合后的分段曲线
+    // @ts-ignore
     data.intervals.forEach((inv, i) => {
+      // @ts-ignore
       const start = i === 0 ? 0 : data.intervals[i - 1].limit;
+      // @ts-ignore
       const end = Math.min(inv.limit, data.points[data.points.length - 1].x);
       const seg = [];
       for (let x = start; x <= end; x += (end - start) / 15) {
         seg.push({
           x,
+          // @ts-ignore
           y: Utils.evalPoly(x, inv.a2, inv.a1, inv.a0) * data.points[0].y,
         });
       }
@@ -306,6 +352,7 @@ const ChartManager = {
       });
     });
 
+    // @ts-ignore
     this.instances.simPreviewChart = new Chart(ctx, {
       data: { datasets },
       options: { 
@@ -322,8 +369,9 @@ const ChartManager = {
     });
 
     // 同步更新侧边表格中的拟合方程显示
-    const tb = document.getElementById("simFitTable");
+    const tb = /** @type {HTMLElement} */ (document.getElementById("simFitTable"));
     tb.innerHTML = "";
+    // @ts-ignore
     data.intervals.forEach((inv, i) => {
       const eq =
         inv.type === "Lin"

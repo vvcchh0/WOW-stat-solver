@@ -6,6 +6,54 @@
  * 不包含任何业务逻辑函数，仅提供数据结构。
  */
 
+/**
+ * @typedef {Object} Interval
+ * @property {number} limit
+ * @property {number} a2
+ * @property {number} a1
+ * @property {number} a0
+ * @property {number} [id]
+ * @property {number} [r2]
+ * @property {string} [type]
+ */
+
+/**
+ * @typedef {Object} StatConfig
+ * @property {string} name_zh
+ * @property {string} name_en
+ * @property {string} export_name
+ * @property {string} color
+ * @property {string} class
+ * @property {string} icon
+ * @property {number} def_conv
+ * @property {number} def_base
+ * @property {number} base_limit
+ * @property {number} step_limit
+ * @property {string} letter
+ * @property {string} var
+ */
+
+/**
+ * @typedef {Object} StatState
+ * @property {string} id
+ * @property {boolean} locked
+ * @property {number} lockVal
+ * @property {number} basePct
+ * @property {number} statBase
+ * @property {number} conv
+ * @property {Interval[]} intervals
+ */
+
+/**
+ * @typedef {Object} State
+ * @property {string} lang
+ * @property {number} budget
+ * @property {string} displayMode
+ * @property {{c: number, h: number, m: number, v: number}} customValues
+ * @property {{c: StatState, h: StatState, m: StatState, v: StatState}} stats
+ * @property {{c: number, h: number, m: number, v: number, score: number}} optResults
+ */
+
 // ==================================================================================
 // 1. 多语言配置 (I18N)
 // ==================================================================================
@@ -13,6 +61,7 @@
  * UI 文本字典
  * 结构：{ [langCode]: { [key]: "Text Content" } }
  *用于 main.js 中的 updateLanguageUI() 进行 DOM 文本替换。
+ * @type {Object.<string, Object.<string, string>>}
  */
 const I18N = {
   zh: {
@@ -123,6 +172,8 @@ const POLY_DEFAULT = {
  * - def_conv: N等级 = 1% 面板属性
  * - base_limit: 进入 10% 递减前的阈值 (如 30%)
  * - step_limit: 每个递减阶段的跨度 (如 10%)
+ * 
+ * @type {{c: StatConfig, h: StatConfig, m: StatConfig, v: StatConfig}}
  */
 const STAT_CONFIG = {
   c: {
@@ -190,11 +241,7 @@ const STAT_CONFIG = {
  * 核心状态对象 (Reactive Source)
  * 存储应用运行时的所有动态数据。修改此对象后需调用 updateUI() 刷新界面。
  * 
- * @property {string} lang - 当前语言 'zh' | 'en'
- * @property {number} budget - 当前可分配的总绿字预算 (Rating)
- * @property {Object} customValues - 右侧"自定义配装"区域的手动输入值
- * @property {Object} stats - 四大属性的详细配置（含区间数据 intervals、锁定状态 locked 等）
- * @property {Object} optResults - 算法计算出的最优解缓存
+ * @type {State}
  */
 let state = {
   lang: "zh",

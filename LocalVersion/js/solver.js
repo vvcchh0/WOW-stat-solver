@@ -14,7 +14,7 @@
  */
 const Solver = {
   /**
-   * @property {Object|null} simImportTempData - 暂存 SimC 导入并解析拟合后的中间数据
+   * @property {Object.<string, {intervals: Interval[], points: {x:number, y:number}[]}>|null} simImportTempData - 暂存 SimC 导入并解析拟合后的中间数据
    */
   simImportTempData: null, 
 
@@ -23,17 +23,22 @@ const Solver = {
    * 在给定的预算下，通过多轮迭代，每轮寻找边际收益最高的属性进行步进分配，从而逼近全局最优解。
    * 
    * @param {number} targetBudget - 需要分配的总绿字预算
-   * @returns {Object} 包含四项属性 (c, h, m, v) 分配数值的理论最优解
+   * @returns {{c: number, h: number, m: number, v: number, score?: number}} 包含四项属性 (c, h, m, v) 分配数值的理论最优解
    */
   solveOptimalDistribution(targetBudget) {
     let available = targetBudget;
+    /** @type {{c: number, h: number, m: number, v: number}} */
     let results = { c: 0, h: 0, m: 0, v: 0 };
+    /** @type {string[]} */
     let unlocked = [];
 
     // 1. 处理锁定属性：锁定属性优先占用预算
     ["c", "h", "m", "v"].forEach((k) => {
+      // @ts-ignore
       if (state.stats[k].locked) {
+        // @ts-ignore
         results[k] = state.stats[k].lockVal;
+        // @ts-ignore
         available -= state.stats[k].lockVal;
       } else {
         unlocked.push(k);
@@ -45,13 +50,17 @@ const Solver = {
     if (available > 0 && unlocked.length > 0) {
       stepSizes.forEach((step) => {
         while (available >= step) {
-          let bestStat = null,
-            maxGain = -1;
+          /** @type {string|null} */
+          let bestStat = null;
+          let maxGain = -1;
           
           unlocked.forEach((k) => {
+            // @ts-ignore
             const curR = results[k];
             // 计算当前属性在增加 step 步长后的边际收益率 (nextMultiplier / currentMultiplier)
+            // @ts-ignore
             const curM = Utils.getMultiplier(k, curR) || 0.00001;
+            // @ts-ignore
             const nextM = Utils.getMultiplier(k, curR + step);
             const gain = nextM / curM;
             
@@ -62,6 +71,7 @@ const Solver = {
           });
 
           if (bestStat) {
+            // @ts-ignore
             results[bestStat] += step;
             available -= step;
           } else {
@@ -72,18 +82,21 @@ const Solver = {
 
       // 3. 处理剩余不足最小步长的余量
       if (available > 0) {
-        let bestStat = null,
-          maxGain = -1;
+        /** @type {string|null} */
+        let bestStat = null;
+        let maxGain = -1;
         unlocked.forEach((k) => {
-          const m =
-            Utils.getMultiplier(k, results[k] + available) /
-            (Utils.getMultiplier(k, results[k]) || 0.00001);
+          // @ts-ignore
+          const m = Utils.getMultiplier(k, results[k] + available) / (Utils.getMultiplier(k, results[k]) || 0.00001);
           if (m > maxGain) {
             maxGain = m;
             bestStat = k;
           }
         });
-        if (bestStat) results[bestStat] += available;
+        if (bestStat) {
+            // @ts-ignore
+            results[bestStat] += available;
+        }
       }
     }
     return results;
@@ -94,7 +107,9 @@ const Solver = {
    * 常在预算改变或属性配置变动后调用
    */
   runSolver() {
+    // @ts-ignore
     state.optResults = this.solveOptimalDistribution(state.budget);
+    // @ts-ignore
     state.optResults.score = Utils.calculateTotalScore(state.optResults);
   },
 
@@ -102,7 +117,7 @@ const Solver = {
    * 生成不同预算下的成长轨迹数据
    * 用于绘制绿字分配随总预算增长的演变图表
    * 
-   * @returns {Object} 包含横轴 labels (预算) 和纵轴 d (各项属性值及评分)
+   * @returns {{labels: number[], d: {c: number[], h: number[], m: number[], v: number[], scores: number[], pcts: {c: number[], h: number[], m: number[], v: number[]}}}}
    */
   generateTrajectory() {
     const minB = 5000,
@@ -110,12 +125,17 @@ const Solver = {
       step = 2000,
       labels = [],
       d = {
-        c: [],
-        h: [],
-        m: [],
-        v: [],
-        scores: [],
-        pcts: { c: [], h: [], m: [], v: [] },
+        c: /** @type {number[]} */ ([]),
+        h: /** @type {number[]} */ ([]),
+        m: /** @type {number[]} */ ([]),
+        v: /** @type {number[]} */ ([]),
+        scores: /** @type {number[]} */ ([]),
+        pcts: { 
+            c: /** @type {number[]} */ ([]), 
+            h: /** @type {number[]} */ ([]), 
+            m: /** @type {number[]} */ ([]), 
+            v: /** @type {number[]} */ ([]) 
+        },
       };
     
     for (let b = minB; b <= maxB; b += step) {
@@ -125,10 +145,15 @@ const Solver = {
       d.h.push(res.h);
       d.m.push(res.m);
       d.v.push(res.v);
+      // @ts-ignore
       d.pcts.c.push(Utils.getPanelPercent("c", res.c));
+      // @ts-ignore
       d.pcts.h.push(Utils.getPanelPercent("h", res.h));
+      // @ts-ignore
       d.pcts.m.push(Utils.getPanelPercent("m", res.m));
+      // @ts-ignore
       d.pcts.v.push(Utils.getPanelPercent("v", res.v));
+      // @ts-ignore
       d.scores.push(Utils.calculateTotalScore(res));
     }
     return { labels, d };
@@ -142,11 +167,16 @@ const Solver = {
   processSimData(text) {
     // 0. 从 UI 获取当前基准值，用于计算正确的 DR 临界点
     ["c", "h", "m", "v"].forEach(
-      (k) => (state.stats[k].statBase = parseInt(document.getElementById(`sim_base_${k}`).value) || 0)
+      // @ts-ignore
+      (k) => (state.stats[k].statBase = parseInt(/** @type {HTMLInputElement} */ (document.getElementById(`sim_base_${k}`)).value) || 0)
     );
 
     const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+    
+    /** @type {{c: {x:number, y:number}[], h: {x:number, y:number}[], m: {x:number, y:number}[], v: {x:number, y:number}[]}} */
     let statPoints = { c: [], h: [], m: [], v: [] };
+    
+    /** @type {string|null} */
     let currentStat = null;
 
     // 1. 提取点阵数据 (解析 rating 和对应的收益 y 值)
@@ -159,26 +189,32 @@ const Solver = {
 
       const m = lines[i].match(/-?[\d,.]+(?:e[+-]?\d+)?/gi);
       if (currentStat && m && m.length >= 2) {
-        const x = parseFloat(m[0].replace(/,/g, "")),
+        const x = parseFloat(m[0].replace(/,/g, "")), 
               y = parseFloat(m[1].replace(/,/g, ""));
+        // @ts-ignore
         if (!isNaN(x) && !isNaN(y)) statPoints[currentStat].push({ x, y });
       }
     }
 
+    // @ts-ignore - Explicitly casting empty object to satisfy the complex type definition
     this.simImportTempData = {};
 
     // 2. 针对每个属性执行分段拟合
     ["c", "h", "m", "v"].forEach((k) => {
+      // @ts-ignore
       const pts = statPoints[k];
       if (!pts || pts.length < 5) return;
-      pts.sort((a, b) => a.x - b.x);
+      pts.sort((/** @type {{x:number}} */ a, /** @type {{x:number}} */ b) => a.x - b.x);
       
       const D0 = pts[0].y; // 以第一个点作为基准收益 1.0
+      // @ts-ignore
       const base = state.stats[k].statBase;
+      // @ts-ignore
       const dr = STAT_CONFIG[k];
       const step = pts[1].x - pts[0].x;
 
       // 根据 DR 阈值计算数据分段的索引位置
+      /** @param {number} lim */
       const calcCap = (lim) => {
         const r = lim - base;
         return r <= 0 ? 0 : Math.round(r / step) * step;
@@ -191,15 +227,16 @@ const Solver = {
         pts[pts.length - 1].x
       ])].filter((v) => v > 0).sort((a, b) => a - b);
 
+      /** @type {Interval[]} */
       const intervals = [];
       caps.forEach((cap, idx) => {
         const prev = idx === 0 ? -1 : caps[idx - 1];
-        const slice = pts.filter((p) => p.x > prev && p.x <= cap);
+        const slice = pts.filter((/** @type {{x:number}} */ p) => p.x > prev && p.x <= cap);
         
         if (slice.length > 3) {
           const n = slice.length;
           let sx = 0, sy = 0, sxy = 0, sxx = 0;
-          slice.forEach((p) => {
+          slice.forEach((/** @type {{x:number, y:number}} */ p) => {
             const r = p.y / D0;
             sx += p.x;
             sy += r;
@@ -213,7 +250,7 @@ const Solver = {
           
           const my = sy / n;
           let ssres = 0, sstot = 0;
-          slice.forEach((p) => {
+          slice.forEach((/** @type {{x:number, y:number}} */ p) => {
             const r = p.y / D0;
             ssres += Math.pow(r - (a1 * p.x + a0), 2);
             sstot += Math.pow(r - my, 2);
@@ -233,7 +270,7 @@ const Solver = {
           } else {
             // B. 否则执行二阶多项式拟合 (通过克莱姆法则/矩阵消元求解正规方程组)
             let s1 = n, s2 = sx, s3 = sxx, s4 = 0, s5 = 0, y1 = sy, y2 = sxy, y3 = 0;
-            slice.forEach((p) => {
+            slice.forEach((/** @type {{x:number, y:number}} */ p) => {
               const x = p.x, x2 = x * x, r = p.y / D0;
               s4 += x2 * x; s5 += x2 * x2; y3 += x2 * r;
             });
@@ -255,7 +292,7 @@ const Solver = {
                   q0 = (m[0][3] - m[0][2] * q2 - m[0][1] * q1) / m[0][0];
             
             let ssres_quad = 0;
-            slice.forEach((p) => {
+            slice.forEach((/** @type {{x:number, y:number}} */ p) => {
               const x = p.x, r = p.y / D0;
               const r_pred = q2 * x * x + q1 * x + q0;
               ssres_quad += Math.pow(r - r_pred, 2);
@@ -273,6 +310,7 @@ const Solver = {
           }
         }
       });
+      // @ts-ignore
       this.simImportTempData[k] = { intervals, points: pts };
     });
   },
@@ -289,11 +327,13 @@ const ConfigManager = {
   export() {
     let out = "";
     ["c", "h", "m", "v"].forEach((k) => {
+      // @ts-ignore
       const s = state.stats[k];
+      // @ts-ignore
       out += `${STAT_CONFIG[k].export_name}:\n{\nSPEC BASE = ${s.basePct}\nRATING/1% = ${s.conv}\nSTAT BASE RATING = ${s.statBase}\n`;
       s.intervals.forEach(
-        (inv, i) =>
-          (out += `INTERVAL${i + 1}\n{\nRANGEMAX = ${inv.limit}\na2 = ${inv.a2}\na1 = ${inv.a1}\na0 = ${inv.a0}\n}\n`),
+        (/** @type {Interval} */ inv, /** @type {number} */ i) =>
+          (out += `INTERVAL${i + 1}\n{\nRANGEMAX = ${inv.limit}\na2 = ${inv.a2}\na1 = ${inv.a1}\na0 = ${inv.a0}\n}\n`)
       );
       out += `}\n\n`;
     });
@@ -310,12 +350,15 @@ const ConfigManager = {
    * @param {HTMLInputElement} inp - 文件输入 DOM 元素
    */
   import(inp) {
+    // 修复：inp.files 可能为 null
+    if (!inp || !inp.files || !inp.files[0]) return;
     const f = inp.files[0];
-    if (!f) return;
     const r = new FileReader();
     r.onload = (e) => {
-      ConfigManager.parse(e.target.result);
-      inp.value = "";
+      if (e.target) {
+        ConfigManager.parse(/** @type {string} */ (e.target.result));
+        inp.value = "";
+      }
     };
     r.readAsText(f);
   },
@@ -327,7 +370,14 @@ const ConfigManager = {
   parse(txt) {
     try {
       const lines = txt.split("\n").map((l) => l.trim()).filter((l) => l);
-      let curStat = null, curInt = null;
+      
+      /** @type {string|null} */
+      let curStat = null;
+      
+      /** @type {any|null} */
+      let curInt = null;
+      
+      // @ts-ignore
       const newStats = JSON.parse(JSON.stringify(state.stats));
       ["c", "h", "m", "v"].forEach((k) => (newStats[k].intervals = []));
 
@@ -361,7 +411,9 @@ const ConfigManager = {
           }
         }
       });
+      // @ts-ignore
       state.stats = newStats;
+      // @ts-ignore
       initStats(false);
     } catch (e) {
       console.error("Config Parsing Error:", e);

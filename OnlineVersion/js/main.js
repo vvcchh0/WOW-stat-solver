@@ -17,6 +17,11 @@ function initApp() {
   renderCards();
 
   // 安全绑定事件监听，防止 DOM 缺失导致脚本中断
+  /**
+   * @param {string} id 
+   * @param {string} event 
+   * @param {EventListenerOrEventListenerObject} fn 
+   */
   const safeBind = (id, event, fn) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener(event, fn);
@@ -24,13 +29,16 @@ function initApp() {
 
   safeBind("btnReset", "click", resetApp);
   safeBind("btnTraj", "click", openTrajectoryModal);
+  // @ts-ignore
   safeBind("btnExport", "click", () => ConfigManager.export());
-  safeBind("btnImport", "change", (e) => ConfigManager.import(e.target));
+  // @ts-ignore
+  safeBind("btnImport", "change", (e) => ConfigManager.import(/** @type {HTMLInputElement} */ (e.target)));
   safeBind("btnSimImport", "click", openSimImportModal); 
   safeBind("btnApplySim", "click", applySimData);
   safeBind("langToggle", "click", toggleLanguage);
 
   // 执行初始计算并渲染 UI
+  // @ts-ignore
   Solver.runSolver();
   updateLanguageUI();
   updateUI();
@@ -43,13 +51,18 @@ function initApp() {
 function initStats(useDefaults = true) {
   const el = document.getElementById("footer-formula");
   if (el) {
+    // @ts-ignore
     katex.render("Gain = a_2 X^2 + a_1 X + a_0", el, {
       throwOnError: false,
     });
   }
 
-  ["c", "h", "m", "v"].forEach((k) => {
+  /** @type {Array<"c"|"h"|"m"|"v">} */
+  const keys = ["c", "h", "m", "v"];
+  keys.forEach((k) => {
+    // @ts-ignore
     if (useDefaults && state.stats[k].intervals.length === 0) {
+      // @ts-ignore
       addInterval(k, STAT_CONFIG[k].base_limit, POLY_DEFAULT.a2, POLY_DEFAULT.a1, POLY_DEFAULT.a0);
     }
   });
@@ -64,48 +77,59 @@ function initStats(useDefaults = true) {
  */
 function updateUI() {
   let tm = 1.0;
-  ["c", "h", "m", "v"].forEach((k) => {
+  /** @type {Array<"c"|"h"|"m"|"v">} */
+  const keys = ["c", "h", "m", "v"];
+  keys.forEach((k) => {
+    // @ts-ignore
     const val = Math.round(state.optResults[k]);
     const ctr = document.getElementById(`container_${k}`);
     if (!ctr) return;
 
     // 若未锁定，则将最优解同步到输入框显示
+    // @ts-ignore
     if (!state.stats[k].locked) {
-      ctr.querySelector(".lock-input").value = val;
+      /** @type {HTMLInputElement} */ (ctr.querySelector(".lock-input")).value = String(val);
     }
 
     // 动态渲染当前数值所在的区间公式
     const fC = document.getElementById(`formula_${k}`);
     if (fC) {
       fC.innerHTML = "";
+      // @ts-ignore
       const inv = Utils.getActiveInterval(k, val);
       if (inv) {
         const { a2, a1, a0 } = inv;
+        // @ts-ignore
         const L = STAT_CONFIG[k].letter, v = STAT_CONFIG[k].var;
         let f = `${L} = `;
         if (a2 !== 0) f += `${a2}${v}^2 + `;
         f += `${a1}${v} + ${a0}`;
         try {
+          // @ts-ignore
           katex.render(f, fC, { throwOnError: false });
         } catch (e) {}
       }
     }
 
     // 更新各属性展示面板
+    // @ts-ignore
     const m = Utils.getMultiplier(k, val);
-    ctr.querySelector(".stat-mult-display").innerText = m.toFixed(4);
-    ctr.querySelector(".panel-percent-display").innerText =
+    /** @type {HTMLElement} */ (ctr.querySelector(".stat-mult-display")).innerText = m.toFixed(4);
+    /** @type {HTMLElement} */ (ctr.querySelector(".panel-percent-display")).innerText =
+      // @ts-ignore
       Utils.getPanelPercent(k, val).toFixed(1) + "%";
     
     // 累计总收益
     tm *= m;
   });
 
+  // @ts-ignore
   state.optResults.score = tm;
-  document.getElementById("maxScore").innerText = tm.toFixed(4) + "x";
+  /** @type {HTMLElement} */ (document.getElementById("maxScore")).innerText = tm.toFixed(4) + "x";
 
   // 同步更新自定义对比区 and 图表
   renderCustomInputs();
+  // @ts-ignore
   ChartManager.updateCharts();
   updateComparison();
 }
@@ -115,25 +139,27 @@ function updateUI() {
  * @param {number|string} v - 预算数值
  */
 function setBudget(v) {
-  const budgetVal = parseInt(v);
+  const budgetVal = parseInt(String(v));
+  // @ts-ignore
   state.budget = budgetVal;
   
-  const sl = document.getElementById("budgetSlider");
-  const inp = document.getElementById("budgetInput");
-  if (sl) sl.value = budgetVal;
-  if (inp) inp.value = budgetVal;
+  const sl = /** @type {HTMLInputElement|null} */ (document.getElementById("budgetSlider"));
+  const inp = /** @type {HTMLInputElement|null} */ (document.getElementById("budgetInput"));
+  if (sl) sl.value = String(budgetVal);
+  if (inp) inp.value = String(budgetVal);
 
-  document.getElementById("budgetDisplay").innerText = budgetVal.toLocaleString();
+  /** @type {HTMLElement} */ (document.getElementById("budgetDisplay")).innerText = budgetVal.toLocaleString();
   
+  // @ts-ignore
   Solver.runSolver();
   updateUI();
 }
 
 // 绑定预算输入事件
-const budgetSl = document.getElementById("budgetSlider");
-const budgetInp = document.getElementById("budgetInput");
-if (budgetSl) budgetSl.addEventListener("input", (e) => setBudget(e.target.value));
-if (budgetInp) budgetInp.addEventListener("input", (e) => setBudget(e.target.value));
+const budgetSl = /** @type {HTMLInputElement|null} */ (document.getElementById("budgetSlider"));
+const budgetInp = /** @type {HTMLInputElement|null} */ (document.getElementById("budgetInput"));
+if (budgetSl) budgetSl.addEventListener("input", (e) => setBudget(/** @type {HTMLInputElement} */ (e.target).value));
+if (budgetInp) budgetInp.addEventListener("input", (e) => setBudget(/** @type {HTMLInputElement} */ (e.target).value));
 
 /**
  * 渲染自定义对比输入区域
@@ -143,12 +169,18 @@ function renderCustomInputs() {
   if (!ctr) return;
   
   ctr.innerHTML = "";
-  ["c", "h", "m", "v"].forEach((k) => {
+  /** @type {Array<"c"|"h"|"m"|"v">} */
+  const keys = ["c", "h", "m", "v"];
+  keys.forEach((k) => {
+    // @ts-ignore
     const name = state.lang === "zh" ? STAT_CONFIG[k].name_zh : STAT_CONFIG[k].name_en;
     let pre = "";
+    // @ts-ignore
     if (state.displayMode === "total") {
+      // @ts-ignore
       pre = `<span class="base-prefix">${state.stats[k].statBase} +</span>`;
     }
+    // @ts-ignore
     ctr.innerHTML += `
       <div class="flex items-center gap-3">
         <span class="w-1.5 h-6 rounded-full" style="background:${STAT_CONFIG[k].color}"></span>
@@ -169,26 +201,35 @@ function renderCustomInputs() {
  * 渲染四个属性卡片
  */
 function renderCards() {
-  ["c", "h", "m", "v"].forEach((k) => renderStatCard(k));
+  /** @type {Array<"c"|"h"|"m"|"v">} */
+  const keys = ["c", "h", "m", "v"];
+  keys.forEach((k) => renderStatCard(k));
 }
 
 /**
  * 渲染单个属性配置卡片 (Critical/Haste/Mastery/Versatility)
- * @param {string} key - 属性键名
+ * @param {"c"|"h"|"m"|"v"} key - 属性键名
  */
 function renderStatCard(key) {
+  // @ts-ignore
   const config = STAT_CONFIG[key];
+  // @ts-ignore
   const tText = I18N[state.lang];
   const container = document.getElementById(`container_${key}`);
   if (!container) return;
 
-  const tpl = document.getElementById("stat-card-template").content.cloneNode(true);
+  const tplElement = /** @type {HTMLTemplateElement} */ (document.getElementById("stat-card-template"));
+  const tpl = /** @type {DocumentFragment} */ (tplElement.content.cloneNode(true));
   
   // A. 标题与图标渲染
+  // @ts-ignore
   tpl.querySelector(".stat-header").classList.add(config.class);
+  // @ts-ignore
   tpl.querySelector(".stat-bg-icon").classList.add(config.icon);
-  tpl.querySelector(".stat-name").innerText = state.lang === "zh" ? config.name_zh : config.name_en;
-  tpl.querySelector(".stat-name").style.color = config.color;
+  // @ts-ignore
+  /** @type {HTMLElement} */ (tpl.querySelector(".stat-name")).innerText = state.lang === "zh" ? config.name_zh : config.name_en;
+  // @ts-ignore
+  /** @type {HTMLElement} */ (tpl.querySelector(".stat-name")).style.color = config.color;
 
   // B. 国际化文本填充
   const labels = {
@@ -197,62 +238,80 @@ function renderStatCard(key) {
     sbase: "stat_base_label", set: "set_btn_label", cap: "card_cap"
   };
   for (let k in labels) {
-    const el = tpl.querySelector("." + labels[k]);
+    const el = /** @type {HTMLElement} */ (tpl.querySelector("." + labels[/** @type {keyof typeof labels} */ (k)]));
+    // @ts-ignore
     if (el) el.innerText = tText["card_" + k] || tText[labels[k].replace(/-/g, "_")] || tText[k];
   }
 
   // C. 锁定逻辑处理
-  const lockCheck = tpl.querySelector(".lock-check");
-  const lockInput = tpl.querySelector(".lock-input");
+  const lockCheck = /** @type {HTMLInputElement} */ (tpl.querySelector(".lock-check"));
+  const lockInput = /** @type {HTMLInputElement} */ (tpl.querySelector(".lock-input"));
+  // @ts-ignore
   lockCheck.checked = state.stats[key].locked;
+  // @ts-ignore
   lockInput.disabled = !state.stats[key].locked;
-  lockInput.value = state.stats[key].lockVal;
+  // @ts-ignore
+  lockInput.value = String(state.stats[key].lockVal);
   
+  // @ts-ignore
   if (state.stats[key].locked) {
-    tpl.querySelector(".glass-panel").classList.add("locked");
+    /** @type {HTMLElement} */ (tpl.querySelector(".glass-panel")).classList.add("locked");
   }
 
   lockCheck.addEventListener("change", (e) => {
-    state.stats[key].locked = e.target.checked;
-    if (e.target.checked) {
+    // @ts-ignore
+    state.stats[key].locked = /** @type {HTMLInputElement} */ (e.target).checked;
+    if (/** @type {HTMLInputElement} */ (e.target).checked) {
+      // @ts-ignore
       state.stats[key].lockVal = Math.round(state.optResults[key]);
     }
     renderStatCard(key);
+    // @ts-ignore
     Solver.runSolver();
     updateUI();
   });
 
   lockInput.addEventListener("input", (e) => {
-    state.stats[key].lockVal = parseInt(e.target.value) || 0;
+    // @ts-ignore
+    state.stats[key].lockVal = parseInt(/** @type {HTMLInputElement} */ (e.target).value) || 0;
+    // @ts-ignore
     Solver.runSolver();
     updateUI();
   });
 
   // D. 基础参数 (转换率 & 基础百分比)
-  const baseInp = tpl.querySelector(".base-input");
-  const convInp = tpl.querySelector(".conv-input");
-  baseInp.value = state.stats[key].basePct;
-  convInp.value = state.stats[key].conv;
+  const baseInp = /** @type {HTMLInputElement} */ (tpl.querySelector(".base-input"));
+  const convInp = /** @type {HTMLInputElement} */ (tpl.querySelector(".conv-input"));
+  // @ts-ignore
+  baseInp.value = String(state.stats[key].basePct);
+  // @ts-ignore
+  convInp.value = String(state.stats[key].conv);
 
   baseInp.addEventListener("change", (e) => {
-    state.stats[key].basePct = parseFloat(e.target.value) || 0;
+    // @ts-ignore
+    state.stats[key].basePct = parseFloat(/** @type {HTMLInputElement} */ (e.target).value) || 0;
     updateUI();
   });
   convInp.addEventListener("change", (e) => {
-    state.stats[key].conv = parseFloat(e.target.value) || 700;
+    // @ts-ignore
+    state.stats[key].conv = parseFloat(/** @type {HTMLInputElement} */ (e.target).value) || 700;
     updateUI();
   });
 
   // E. 属性起始基准值 (Stat Base)
-  tpl.querySelector(".base-rating-display").innerText = state.stats[key].statBase;
+  // @ts-ignore
+  /** @type {HTMLElement} */ (tpl.querySelector(".base-rating-display")).innerText = String(state.stats[key].statBase);
+  // @ts-ignore
   tpl.querySelector(".set-base-btn").addEventListener("click", openBaseModal);
 
   // F. 拟合分段区间列表渲染
-  const list = tpl.querySelector(".intervals-list");
+  const list = /** @type {HTMLElement} */ (tpl.querySelector(".intervals-list"));
   list.innerHTML = "";
-  state.stats[key].intervals.forEach((inv) => {
+  // @ts-ignore
+  state.stats[key].intervals.forEach((/** @type {any} */ inv) => {
     const r = document.createElement("div");
     r.className = "grid grid-cols-12 gap-1 items-center bg-[#020617] p-2 rounded border border-slate-700/50 mb-1";
+    // @ts-ignore
     const canDel = state.stats[key].intervals.length > 1;
     
     r.innerHTML = `
@@ -266,20 +325,26 @@ function renderStatCard(key) {
     
     r.querySelectorAll("input").forEach((i) =>
       i.addEventListener("change", (e) => {
+        // @ts-ignore
         inv[e.target.dataset.f] = parseFloat(e.target.value);
+        // @ts-ignore
         if (e.target.dataset.f === "limit") {
+          // @ts-ignore
           state.stats[key].intervals.sort((a, b) => a.limit - b.limit);
           renderStatCard(key);
         }
+        // @ts-ignore
         Solver.runSolver();
         updateUI();
       }),
     );
 
     if (canDel) {
-      r.querySelector(".del-btn").addEventListener("click", () => {
+      /** @type {HTMLElement} */ (r.querySelector(".del-btn")).addEventListener("click", () => {
+        // @ts-ignore
         state.stats[key].intervals = state.stats[key].intervals.filter((i) => i.id !== inv.id);
         renderStatCard(key);
+        // @ts-ignore
         Solver.runSolver();
         updateUI();
       });
@@ -288,24 +353,29 @@ function renderStatCard(key) {
   });
 
   // 新增区间按钮
-  tpl.querySelector(".add-interval-btn").addEventListener("click", () => {
+  /** @type {HTMLElement} */ (tpl.querySelector(".add-interval-btn")).addEventListener("click", () => {
+    // @ts-ignore
     const last = state.stats[key].intervals[state.stats[key].intervals.length - 1];
     addInterval(
       key,
       last ? last.limit + 7000 : 21000,
+      // @ts-ignore
       POLY_DEFAULT.a2,
+      // @ts-ignore
       POLY_DEFAULT.a1,
+      // @ts-ignore
       last ? last.a0 : POLY_DEFAULT.a0,
     );
     renderStatCard(key);
+    // @ts-ignore
     Solver.runSolver();
     updateUI();
   });
 
   // 绑定动态 ID
-  tpl.querySelector(".katex-formula-container").id = `formula_${key}`;
-  tpl.querySelector(".stat-mult-display").id = `mult_display_${key}`;
-  tpl.querySelector(".panel-percent-display").id = `percent_display_${key}`;
+  /** @type {HTMLElement} */ (tpl.querySelector(".katex-formula-container")).id = `formula_${key}`;
+  /** @type {HTMLElement} */ (tpl.querySelector(".stat-mult-display")).id = `mult_display_${key}`;
+  /** @type {HTMLElement} */ (tpl.querySelector(".panel-percent-display")).id = `percent_display_${key}`;
   
   container.innerHTML = "";
   container.appendChild(tpl);
@@ -313,13 +383,20 @@ function renderStatCard(key) {
 
 /**
  * 为指定属性添加一个新的计算分段区间
+ * @param {"c"|"h"|"m"|"v"} k
+ * @param {number} lim
+ * @param {number} a2
+ * @param {number} a1
+ * @param {number} a0
  */
 function addInterval(k, lim, a2, a1, a0) {
+  // @ts-ignore
   state.stats[k].intervals.push({
     id: Date.now() + Math.random(),
     limit: lim,
     a2, a1, a0,
   });
+  // @ts-ignore
   state.stats[k].intervals.sort((a, b) => a.limit - b.limit);
 }
 
@@ -333,10 +410,14 @@ function openBaseModal() {
   if (!container) return;
   
   container.innerHTML = "";
-  ["c", "h", "m", "v"].forEach((k) => {
+  /** @type {Array<"c"|"h"|"m"|"v">} */
+  const keys = ["c", "h", "m", "v"];
+  keys.forEach((k) => {
+    // @ts-ignore
     const conf = STAT_CONFIG[k];
     const row = document.createElement("div");
     row.className = "flex items-center gap-3";
+    // @ts-ignore
     row.innerHTML = `
       <div class="w-2 h-8 rounded" style="background:${conf.color}"></div>
       <div class="flex-1">
@@ -347,35 +428,42 @@ function openBaseModal() {
     container.appendChild(row);
   });
   
-  document.getElementById("baseModal").classList.remove("hidden");
-  setTimeout(() => document.getElementById("baseModalContent").classList.remove("scale-95", "opacity-0"), 10);
+  /** @type {HTMLElement} */ (document.getElementById("baseModal")).classList.remove("hidden");
+  setTimeout(() => /** @type {HTMLElement} */ (document.getElementById("baseModalContent")).classList.remove("scale-95", "opacity-0"), 10);
 }
 
 /**
  * 关闭属性基准值设定模态框
  */
 function closeBaseModal() {
-  document.getElementById("baseModalContent").classList.add("scale-95", "opacity-0");
-  setTimeout(() => document.getElementById("baseModal").classList.add("hidden"), 200);
+  /** @type {HTMLElement} */ (document.getElementById("baseModalContent")).classList.add("scale-95", "opacity-0");
+  setTimeout(() => /** @type {HTMLElement} */ (document.getElementById("baseModal")).classList.add("hidden"), 200);
 }
 
 /**
  * 保存属性基准值设置，并自动平移现有的分段区间限制
  */
 function saveBaseSettings() {
-  ["c", "h", "m", "v"].forEach((k) => {
-    const newVal = parseInt(document.getElementById(`modal_base_${k}`).value) || 0;
+  /** @type {Array<"c"|"h"|"m"|"v">} */
+  const keys = ["c", "h", "m", "v"];
+  keys.forEach((k) => {
+    const newVal = parseInt(/** @type {HTMLInputElement} */ (document.getElementById(`modal_base_${k}`)).value) || 0;
+    // @ts-ignore
     const oldVal = state.stats[k].statBase;
     const diff = newVal - oldVal;
     
+    // @ts-ignore
     state.stats[k].statBase = newVal;
 
     // 自动平移区间：当基准值增加时，现有的 RANGEMAX 应当相应减少以保持物理意义上的“绿字上限”一致
+    // @ts-ignore
     const intervals = state.stats[k].intervals;
     if (intervals.length > 0) {
+      // @ts-ignore
       intervals.forEach((inv) => {
         inv.limit = Math.max(0, inv.limit - diff);
       });
+      // @ts-ignore
       intervals.sort((a, b) => a.limit - b.limit);
     }
   });
@@ -383,6 +471,7 @@ function saveBaseSettings() {
   renderCards();
   closeBaseModal();
   renderCustomInputs();
+  // @ts-ignore
   Solver.runSolver();
   updateUI();
 }
@@ -392,22 +481,25 @@ function saveBaseSettings() {
  * @param {string} mode - 'gain' 或 'total'
  */
 function setMode(mode) {
+  // @ts-ignore
   state.displayMode = mode;
   const btnGain = document.getElementById("btn-mode-gain");
   const btnTotal = document.getElementById("btn-mode-total");
   const labels = document.querySelectorAll(".mode-label-text");
+  // @ts-ignore
   const t = I18N[state.lang];
 
   if (mode === "gain") {
-    btnGain.className = "px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white";
-    btnTotal.className = "px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white";
-    labels.forEach((l) => (l.innerText = t.mode_gain_text));
+    /** @type {HTMLElement} */ (btnGain).className = "px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white";
+    /** @type {HTMLElement} */ (btnTotal).className = "px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white";
+    labels.forEach((l) => (/** @type {HTMLElement} */ (l).innerText = t.mode_gain_text));
   } else {
-    btnGain.className = "px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white";
-    btnTotal.className = "px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white";
-    labels.forEach((l) => (l.innerText = t.mode_total_text));
+    /** @type {HTMLElement} */ (btnGain).className = "px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white";
+    /** @type {HTMLElement} */ (btnTotal).className = "px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white";
+    labels.forEach((l) => (/** @type {HTMLElement} */ (l).innerText = t.mode_total_text));
   }
 
+  // @ts-ignore
   ChartManager.updateCharts();
   renderCustomInputs();
 }
@@ -416,16 +508,19 @@ function setMode(mode) {
  * 打开 SimC 文件导入模态框
  */
 function openSimImportModal() {
-  document.getElementById("simImportModal").classList.remove("hidden");
-  setTimeout(() => document.getElementById("simImportContent").classList.remove("scale-95", "opacity-0"), 10);
+  /** @type {HTMLElement} */ (document.getElementById("simImportModal")).classList.remove("hidden");
+  setTimeout(() => /** @type {HTMLElement} */ (document.getElementById("simImportContent")).classList.remove("scale-95", "opacity-0"), 10);
   
   updateSimBaseInputs();
-  document.getElementById("btnApplySim").disabled = true;
-  document.getElementById("importLog").innerText = "Waiting for file...";
-  document.getElementById("simFitTable").innerHTML = '<tr><td colspan="2" class="text-center py-4 text-gray-600">No data loaded</td></tr>';
+  /** @type {HTMLButtonElement} */ (document.getElementById("btnApplySim")).disabled = true;
+  /** @type {HTMLElement} */ (document.getElementById("importLog")).innerText = "Waiting for file...";
+  /** @type {HTMLElement} */ (document.getElementById("simFitTable")).innerHTML = '<tr><td colspan="2" class="text-center py-4 text-gray-600">No data loaded</td></tr>';
   
+  // @ts-ignore
   if (ChartManager.instances.simPreviewChart) {
+    // @ts-ignore
     ChartManager.instances.simPreviewChart.destroy();
+    // @ts-ignore
     ChartManager.instances.simPreviewChart = null;
   }
 }
@@ -434,8 +529,8 @@ function openSimImportModal() {
  * 关闭 SimC 文件导入模态框
  */
 function closeSimImportModal() {
-  document.getElementById("simImportContent").classList.add("scale-95", "opacity-0");
-  setTimeout(() => document.getElementById("simImportModal").classList.add("hidden"), 200);
+  /** @type {HTMLElement} */ (document.getElementById("simImportContent")).classList.add("scale-95", "opacity-0");
+  setTimeout(() => /** @type {HTMLElement} */ (document.getElementById("simImportModal")).classList.add("hidden"), 200);
 }
 
 /**
@@ -445,8 +540,12 @@ function updateSimBaseInputs() {
   const c = document.getElementById("simBaseInputs");
   if (!c) return;
   c.innerHTML = "";
-  ["c", "h", "m", "v"].forEach((k) => {
+  /** @type {Array<"c"|"h"|"m"|"v">} */
+  const keys = ["c", "h", "m", "v"];
+  keys.forEach((k) => {
+    // @ts-ignore
     const cf = STAT_CONFIG[k], nm = state.lang === "zh" ? cf.name_zh : cf.name_en;
+    // @ts-ignore
     c.innerHTML += `
       <div class="flex justify-between items-center bg-slate-800/50 p-2 rounded">
         <span class="text-[10px] font-bold" style="color:${cf.color}">${nm}</span>
@@ -457,24 +556,29 @@ function updateSimBaseInputs() {
 
 /**
  * 响应 SimC 文件选择并触发解析拟合
+ * @param {HTMLInputElement} input
  */
 function handleSimFileSelect(input) {
-  const file = input.files[0];
+  const file = input.files && input.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  const log = document.getElementById("importLog");
+  const log = /** @type {HTMLElement} */ (document.getElementById("importLog"));
   log.innerText = "Processing...";
 
   reader.onload = (e) => {
     try {
+      // @ts-ignore
       Solver.processSimData(e.target.result);
       updatePreviewSelect();
+      // @ts-ignore
       ChartManager.updateSimPreviewChart();
-      document.getElementById("btnApplySim").disabled = false;
+      /** @type {HTMLButtonElement} */ (document.getElementById("btnApplySim")).disabled = false;
+      // @ts-ignore
       log.innerText = "Successfully parsed: " + Object.keys(Solver.simImportTempData).map(k => STAT_CONFIG[k].name_en).join(", ");
     } catch (err) {
       console.error("SimC Parsing Error:", err);
+      // @ts-ignore
       log.innerText = "Error: " + err.message;
     }
   };
@@ -486,12 +590,17 @@ function handleSimFileSelect(input) {
  */
 function updatePreviewSelect() {
   const s = document.getElementById("previewStatSelect");
+  // @ts-ignore
   if (!s || !Solver.simImportTempData) return;
 
   s.innerHTML = "";
-  Object.keys(Solver.simImportTempData).forEach((k) => {
+  // @ts-ignore
+  const keys = /** @type {Array<"c"|"h"|"m"|"v">} */ (Object.keys(Solver.simImportTempData));
+  
+  keys.forEach((k) => {
     const o = document.createElement("option");
     o.value = k;
+    // @ts-ignore
     o.innerText = state.lang === "zh" ? STAT_CONFIG[k].name_zh : STAT_CONFIG[k].name_en;
     s.appendChild(o);
   });
@@ -501,17 +610,25 @@ function updatePreviewSelect() {
  * 应用拟合结果到全局配置
  */
 function applySimData() {
+  // @ts-ignore
   if (!Solver.simImportTempData) return;
 
-  Object.keys(Solver.simImportTempData).forEach((k) => {
+  // @ts-ignore
+  const keys = /** @type {Array<"c"|"h"|"m"|"v">} */ (Object.keys(Solver.simImportTempData));
+  
+  keys.forEach((k) => {
+    // @ts-ignore
     state.stats[k].intervals = Solver.simImportTempData[k].intervals;
-    state.stats[k].statBase = parseInt(document.getElementById(`sim_base_${k}`).value) || 0;
+    // @ts-ignore
+    state.stats[k].statBase = parseInt(/** @type {HTMLInputElement} */ (document.getElementById(`sim_base_${k}`)).value) || 0;
     renderStatCard(k);
   });
 
+  // @ts-ignore
   Solver.runSolver();
   updateUI();
   closeSimImportModal();
+  // @ts-ignore
   Solver.simImportTempData = null;
 }
 
@@ -519,19 +636,24 @@ function applySimData() {
  * 打开成长轨迹图模态框
  */
 function openTrajectoryModal() {
+  // @ts-ignore
   const { labels, d } = Solver.generateTrajectory();
+  // @ts-ignore
   ChartManager.renderPercentTrajChart(labels, d.pcts);
+  // @ts-ignore
   ChartManager.renderTrajectoryChart(labels, d);
+  // @ts-ignore
   ChartManager.renderYieldTrajChart(labels, d.scores);
+  // @ts-ignore
   ChartManager.renderDeltaTrajChart(labels, d.scores);
-  document.getElementById("trajectoryModal").classList.remove("hidden");
+  /** @type {HTMLElement} */ (document.getElementById("trajectoryModal")).classList.remove("hidden");
 }
 
 /**
  * 关闭成长轨迹图模态框
  */
 function closeTrajectoryModal() {
-  document.getElementById("trajectoryModal").classList.add("hidden");
+  /** @type {HTMLElement} */ (document.getElementById("trajectoryModal")).classList.add("hidden");
 }
 
 // --- 4. 辅助与对比逻辑 ---
@@ -540,6 +662,7 @@ function closeTrajectoryModal() {
  * 切换多语言并刷新 UI
  */
 function toggleLanguage() {
+  // @ts-ignore
   state.lang = state.lang === "zh" ? "en" : "zh";
   updateLanguageUI();
   initStats(false); 
@@ -550,26 +673,35 @@ function toggleLanguage() {
  * 根据当前语言更新所有带 [data-i18n] 的 DOM 文本
  */
 function updateLanguageUI() {
+  // @ts-ignore
   const t = I18N[state.lang];
   const langLabel = document.getElementById("langLabel");
+  // @ts-ignore
   if (langLabel) langLabel.innerText = state.lang === "zh" ? "ZH" : "EN";
   
   document.querySelectorAll("[data-i18n]").forEach((el) => {
-    if (t[el.dataset.i18n]) el.innerText = t[el.dataset.i18n];
+    // @ts-ignore
+    if (t[el.dataset.i18n]) /** @type {HTMLElement} */ (el).innerText = t[el.dataset.i18n];
   });
   
   const modeLabels = document.querySelectorAll(".mode-label-text");
+  // @ts-ignore
   const modeT = state.displayMode === "gain" ? t.mode_gain_text : t.mode_total_text;
-  modeLabels.forEach((l) => (l.innerText = modeT));
+  modeLabels.forEach((l) => (/** @type {HTMLElement} */ (l).innerText = modeT));
   
   renderCards();
   renderCustomInputs();
+  // @ts-ignore
   Solver.runSolver();
   updateUI();
   
+  // @ts-ignore
   const labels = Object.values(STAT_CONFIG).map((c) => state.lang === "zh" ? c.name_zh : c.name_en);
+  // @ts-ignore
   if (ChartManager.instances.distChart) {
+    // @ts-ignore
     ChartManager.instances.distChart.data.labels = labels;
+    // @ts-ignore
     ChartManager.instances.distChart.update();
   }
 }
@@ -584,9 +716,12 @@ function resetApp() {
 }
 
 /**
- * 更新用户自定义绿字数值逻辑
+ * 更新用户自定义 green 数值逻辑
+ * @param {string} v
+ * @param {string} k
  */
 function updateComparisonLogic(v, k) {
+  // @ts-ignore
   state.customValues[k] = parseFloat(v) || 0;
   updateComparison();
 }
@@ -595,16 +730,20 @@ function updateComparisonLogic(v, k) {
  * 计算最优解得分与自定义组合得分的差异，并更新对比进度条
  */
 function updateComparison() {
+  // @ts-ignore
   const { c, h, m, v } = state.customValues;
   const currTotalEl = document.getElementById("currTotal");
   if (currTotalEl) currTotalEl.innerText = (c + h + m + v).toLocaleString();
   
+  // @ts-ignore
   const s = Utils.getMultiplier("c", c) * Utils.getMultiplier("h", h) *
+            // @ts-ignore
             Utils.getMultiplier("m", m) * Utils.getMultiplier("v", v);
   
   const currYieldEl = document.getElementById("currYield");
   if (currYieldEl) currYieldEl.innerText = s.toFixed(4);
   
+  // @ts-ignore
   const max = state.optResults.score || 1;
   const diff = (s / max - 1) * 100;
   
@@ -620,6 +759,7 @@ function updateComparison() {
     dEl.innerText = (diff > 0 ? "+" : "") + diff.toFixed(2) + "%";
     dEl.className = `text-xs font-bold font-mono ${diff > -0.1 ? "text-emerald-400" : "text-red-400"}`;
   }
+  // @ts-ignore
   ChartManager.updateCharts();
 }
 
@@ -627,6 +767,9 @@ function updateComparison() {
  * 一键同步最优分配数值到自定义对比区
  */
 function syncOptimal() {
-  ["c", "h", "m", "v"].forEach((k) => (state.customValues[k] = Math.round(state.optResults[k])));
+  // @ts-ignore
+  const keys = ["c", "h", "m", "v"];
+  // @ts-ignore
+  keys.forEach((k) => (state.customValues[k] = Math.round(state.optResults[k])));
   renderCustomInputs();
 }

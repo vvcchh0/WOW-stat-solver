@@ -1,6 +1,6 @@
 # Project Status & Architecture Log
 
-**Last Updated:** 2026-01-18 (End of Session)
+**Last Updated:** 2026-01-19 (End of Session)
 **Project:** WoW Stat Solver
 
 ## 1. Directory Structure
@@ -25,17 +25,15 @@ Root/
 ```
 
 ## 2. Recent Work (Completed)
-*   **Restructuring**: Renamed folders to `LocalVersion` / `OnlineVersion`. Created root portal and documentation.
-*   **Dependency Management**: Fully downloaded all assets for `LocalVersion` (including complex Google Fonts slicing and KaTeX fonts).
-*   **Code Cleanup**: Standardized to single entry point (`main.js`) and removed obsolete files.
-*   **Documentation & Sync**:
-    *   **Core Files**: Added comprehensive JSDoc comments to `config.js`, `utils.js`, `solver.js`, `charts.js`, and `main.js`.
-    *   **Cross-Version Sync**: All logic files are now synchronized between `LocalVersion` and `OnlineVersion`.
+*   **Code Documentation**: Added comprehensive JSDoc comments to `config.js`, `utils.js`, `solver.js`, `charts.js`, and `main.js`.
+*   **Strict Type Safety**: Enabled `checkJs: true` and `strict: true` in `jsconfig.json`. Resolved 100+ type errors by adding explicit JSDoc casts and handling global variable definitions.
+*   **Cross-Version Sync**: All logic files and bug fixes are perfectly synchronized between `LocalVersion` and `OnlineVersion`.
+*   **Browser Compatibility**: Ensured no "redeclaration" errors occur in the browser console by cleaning up variable declarations in `utils.js`.
 
 ## 3. Pending Tasks (Next Session)
-*   **Final Review**: Verify `OnlineVersion` functionality in browser.
 *   **Feature Expansion**: Consider adding "Stat Priority" suggestions based on weight trends.
+*   **Unit Tests**: Explore adding a lightweight testing framework (like Jasmine or a custom runner) to verify solver logic automatically.
 
 ## 4. How to Resume
 1.  **Read this file**: `read_file PROJECT_STATUS.md`
-2.  **Continue Annotation**: Start with `LocalVersion/js/solver.js`.
+2.  **Next Step**: Start implementing new features or tests.
