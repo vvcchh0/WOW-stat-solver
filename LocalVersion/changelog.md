@@ -1,5 +1,23 @@
 # Changelog - LocalVersion (Localized Edition)
 
+## [v1.3.0] - 2026-01-24
+### Added
+- **Strategy Phase Analysis**: New feature in Growth Trajectory to automatically identify and list allocation strategies (Single/Hybrid) across different budget ranges.
+- **Strategy Phase Bar**: A color-coded bar below the trajectory chart for visual strategy overview.
+- **Phase Details List**: A detailed breakdown of strategy breakpoints with start/end stat tooltips.
+- **SimC Fit Strategy Selector**: Added "Smart (Auto)" and "Force Linear" modes to the SimC import modal for more stable allocation results.
+- **X-Axis for Strategy Bar**: Added budget markers (5k - 60k) for better orientation.
+
+### Changed
+- **Algorithm Precision**: Updated greedy search steps to `[100, 25, 5, 1]` to ensure single-unit precision in final results.
+- **Trajectory Resolution**: Increased data points in Growth Trajectory by reducing step size from 2000 to 500.
+- **Live Fitting**: The SimC import preview now updates in real-time when modifying Base Ratings or Fit Strategy.
+- **UI Tweaks**: Budget slider step changed to 1 for precise pool management.
+
+### Fixed
+- **Strategy Merging**: Fixed fragmented strategy intervals by sorting stat names in hybrid labels (e.g., merging "A+B" and "B+A").
+- **Fitting Threshold**: Relaxed linear fitting threshold to 0.99 for improved model robustness.
+
 ## [v1.2.1] - 2026-01-19
 ### Fixed
 - **Strict Mode Compliance**: Resolved 100+ VSCode strict mode (`checkJs: true`) errors across all JS files.

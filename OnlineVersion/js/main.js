@@ -549,7 +549,7 @@ function updateSimBaseInputs() {
     c.innerHTML += `
       <div class="flex justify-between items-center bg-slate-800/50 p-2 rounded">
         <span class="text-[10px] font-bold" style="color:${cf.color}">${nm}</span>
-        <input type="number" id="sim_base_${k}" value="${state.stats[k].statBase}" class="tiny-input w-20 text-right">
+        <input type="number" id="sim_base_${k}" value="${state.stats[k].statBase}" class="tiny-input w-20 text-right" oninput="handleSimBaseChange()">
       </div>`;
   });
 }
@@ -569,7 +569,13 @@ function handleSimFileSelect(input) {
   reader.onload = (e) => {
     try {
       // @ts-ignore
-      Solver.processSimData(e.target.result);
+      Solver.lastRawSimData = e.target.result;
+      
+      const strategyEl = /** @type {HTMLSelectElement} */ (document.getElementById("simFitStrategy"));
+      const strategy = strategyEl ? strategyEl.value : 'auto';
+      
+      // @ts-ignore
+      Solver.processSimData(e.target.result, strategy);
       updatePreviewSelect();
       // @ts-ignore
       ChartManager.updateSimPreviewChart();
@@ -583,6 +589,26 @@ function handleSimFileSelect(input) {
     }
   };
   reader.readAsText(file);
+}
+
+/**
+ * 响应 SimC 基准值输入变动，实时重算拟合
+ */
+function handleSimBaseChange() {
+  // @ts-ignore
+  if (!Solver.lastRawSimData) return;
+  
+  try {
+    const strategyEl = /** @type {HTMLSelectElement} */ (document.getElementById("simFitStrategy"));
+    const strategy = strategyEl ? strategyEl.value : 'auto';
+
+    // @ts-ignore
+    Solver.processSimData(Solver.lastRawSimData, strategy);
+    // @ts-ignore
+    ChartManager.updateSimPreviewChart();
+  } catch (err) {
+    console.error("Re-calc Error:", err);
+  }
 }
 
 /**
@@ -646,6 +672,105 @@ function openTrajectoryModal() {
   ChartManager.renderYieldTrajChart(labels, d.scores);
   // @ts-ignore
   ChartManager.renderDeltaTrajChart(labels, d.scores);
+
+  // 渲染策略阶段条
+  // @ts-ignore
+  const phases = Solver.analyzeTrajectoryPhases({ labels, d });
+  const phaseContainer = document.getElementById("trajPhases");
+  const legendContainer = document.getElementById("trajLegend");
+  const listContainer = document.getElementById("trajPhaseList");
+  const axisContainer = document.getElementById("trajAxis");
+  
+  if (phaseContainer && legendContainer && listContainer) {
+    phaseContainer.innerHTML = "";
+    legendContainer.innerHTML = "";
+    listContainer.innerHTML = "";
+    if (axisContainer) axisContainer.innerHTML = "";
+    
+    const minB = 5000;
+    const maxB = 60000;
+    const totalRange = maxB - minB;
+    const uniquePhases = new Set();
+
+    // Render Axis
+    if (axisContainer) {
+      const steps = 5; 
+      for (let i = 0; i <= steps; i++) {
+        const val = minB + (totalRange / steps) * i;
+        const left = (i / steps) * 100;
+        const tick = document.createElement("div");
+        tick.className = "absolute top-0 transform -translate-x-1/2 flex flex-col items-center";
+        tick.style.left = `${left}%`;
+        tick.innerHTML = `
+          <div class="h-1 w-px bg-gray-600 mb-0.5"></div>
+          <span>${val >= 1000 ? (val/1000) + 'k' : val}</span>
+        `;
+        axisContainer.appendChild(tick);
+      }
+    }
+
+    phases.forEach((p) => {
+      // 1. Bar Segment
+      const width = ((p.end - p.start) / totalRange) * 100;
+      const el = document.createElement("div");
+      el.style.width = `${width}%`;
+      el.style.height = "100%";
+      
+      const fmtStats = (s) => `C:${s.c} H:${s.h} M:${s.m} V:${s.v}`;
+      const tooltipText = `${p.label}\nRange: ${p.start} -> ${p.end}\n\nStart: ${fmtStats(p.startStats)}\nEnd:   ${fmtStats(p.endStats)}`;
+      el.title = tooltipText;
+      
+      let bgStyle = "";
+      if (Array.isArray(p.color)) {
+        bgStyle = `repeating-linear-gradient(45deg, ${p.color[0]}, ${p.color[0]} 10px, ${p.color[1]} 10px, ${p.color[1]} 20px)`;
+      } else {
+        bgStyle = p.color;
+      }
+      el.style.background = bgStyle;
+      phaseContainer.appendChild(el);
+      
+      // 2. Legend Item (Unique)
+      if (!uniquePhases.has(p.label)) {
+        uniquePhases.add(p.label);
+        const lItem = document.createElement("div");
+        lItem.className = "flex items-center gap-2 text-[10px] text-gray-400";
+        
+        let iconStyle = "";
+        if (Array.isArray(p.color)) {
+           iconStyle = `background: repeating-linear-gradient(45deg, ${p.color[0]}, ${p.color[0]} 2px, ${p.color[1]} 2px, ${p.color[1]} 4px)`;
+        } else {
+           iconStyle = `background: ${p.color}`;
+        }
+
+        lItem.innerHTML = `<span class="w-3 h-3 rounded-full block" style="${iconStyle}"></span><span>${p.label}</span>`;
+        legendContainer.appendChild(lItem);
+      }
+
+      // 3. Detail List Item
+      const listItem = document.createElement("div");
+      listItem.className = "bg-slate-800/50 border border-slate-700/50 rounded px-3 py-2 flex items-center justify-between text-[10px] cursor-help hover:bg-slate-800 transition-colors";
+      listItem.title = tooltipText;
+      
+      let dotStyle = "";
+      if (Array.isArray(p.color)) {
+         dotStyle = `background: linear-gradient(to right, ${p.color[0]}, ${p.color[1]})`;
+      } else {
+         dotStyle = `background: ${p.color}`;
+      }
+
+      listItem.innerHTML = `
+        <div class="flex items-center gap-2">
+           <span class="w-2 h-2 rounded-full" style="${dotStyle}"></span>
+           <span class="font-bold text-gray-300">${p.label}</span>
+        </div>
+        <div class="font-mono text-gray-400">
+           <span class="text-indigo-400">${p.start}</span> <i class="fa-solid fa-arrow-right text-[8px] mx-1"></i> <span class="text-indigo-400">${p.end}</span>
+        </div>
+      `;
+      listContainer.appendChild(listItem);
+    });
+  }
+
   /** @type {HTMLElement} */ (document.getElementById("trajectoryModal")).classList.remove("hidden");
 }
 

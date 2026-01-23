@@ -328,7 +328,7 @@
               id="budgetSlider"
               min="5000"
               max="60000"
-              step="100"
+              step="1"
               value="28000"
               class="w-full accent-indigo-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer border border-slate-700"
             />
@@ -546,19 +546,27 @@
             <div
               class="space-y-3 bg-[#0b1121] p-3 rounded border border-slate-700"
             >
-              <label
-                class="block text-xs font-bold text-gray-400 uppercase border-b border-slate-700 pb-1 mb-2"
-                >Sim Base Ratings</label
-              >
-              <div class="grid grid-cols-2 gap-2" id="simBaseInputs">
-                <!-- Generated -->
-              </div>
-            </div>
-
-            <label
-              class="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 transition"
-            >
-              <div
+                          <label
+                            class="block text-xs font-bold text-gray-400 uppercase border-b border-slate-700 pb-1 mb-2"
+                            >Sim Base Ratings</label
+                          >
+                          <div class="grid grid-cols-2 gap-2" id="simBaseInputs">
+                            <!-- Generated -->
+                          </div>
+                          
+                          <!-- Fit Strategy Selector -->
+                          <div class="mt-2">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Fit Strategy</label>
+                            <select id="simFitStrategy" class="w-full text-xs bg-slate-900 border border-slate-700 text-gray-300 rounded p-1.5 focus:border-indigo-500 outline-none" onchange="handleSimBaseChange()">
+                              <option value="auto">Smart (Auto R² ≥ 0.99)</option>
+                              <option value="linear">Force Linear (1st Order)</option>
+                            </select>
+                          </div>
+                        </div>
+              
+                        <label
+                          class="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 transition"
+                        >              <div
                 class="flex flex-col items-center justify-center text-center"
               >
                 <i
@@ -709,6 +717,17 @@
             </div>
             <div class="h-[250px] w-full relative">
               <canvas id="trajChart"></canvas>
+            </div>
+            <!-- Strategy Phases -->
+            <div class="mt-4 px-2">
+               <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Strategy Phases</h5>
+               <div id="trajPhases" class="flex h-4 w-full rounded overflow-hidden relative z-10"></div>
+               <!-- X-Axis -->
+               <div id="trajAxis" class="relative h-4 w-full text-[9px] text-gray-500 font-mono mt-0.5 select-none"></div>
+               
+               <div id="trajLegend" class="flex flex-wrap gap-4 mt-2"></div>
+               <!-- Phase Details List -->
+               <div id="trajPhaseList" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2"></div>
             </div>
           </div>
           <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-800">

@@ -46,7 +46,7 @@ const Solver = {
     });
 
     // 2. 迭代分配逻辑：采用不同步长进行贪婪搜索（从粗到细以提高性能）
-    const stepSizes = [100, 25, 5];
+    const stepSizes = [100, 25, 5, 1];
     if (available > 0 && unlocked.length > 0) {
       stepSizes.forEach((step) => {
         while (available >= step) {
@@ -122,7 +122,7 @@ const Solver = {
   generateTrajectory() {
     const minB = 5000,
       maxB = 60000,
-      step = 2000,
+      step = 500,
       labels = [],
       d = {
         c: /** @type {number[]} */ ([]),
@@ -160,11 +160,87 @@ const Solver = {
   },
 
   /**
+   * 分析成长轨迹，识别分配策略的阶段变化
+   * @param {{labels: number[], d: any}} trajData 
+   */
+  analyzeTrajectoryPhases(trajData) {
+    const { labels, d } = trajData;
+    if (labels.length < 2) return [];
+
+    const phases = [];
+    let currentPhase = null;
+
+    for (let i = 0; i < labels.length - 1; i++) {
+      const bStart = labels[i];
+      const bEnd = labels[i+1];
+      const deltaB = bEnd - bStart;
+
+      // 计算各属性增量
+      const deltas = [
+        { k: 'c', val: d.c[i+1] - d.c[i], color: '#ef4444', name: 'Crit' },
+        { k: 'h', val: d.h[i+1] - d.h[i], color: '#22c55e', name: 'Haste' },
+        { k: 'm', val: d.m[i+1] - d.m[i], color: '#a855f7', name: 'Mast' },
+        { k: 'v', val: d.v[i+1] - d.v[i], color: '#3b82f6', name: 'Vers' }
+      ];
+
+      // 排序找主导属性
+      deltas.sort((a, b) => b.val - a.val);
+
+      let type = "Mixed";
+      let color = "#64748b"; // gray
+      let label = "Mixed";
+
+      // 判定策略
+      // 阈值：若某属性占据增量的 70% 以上 -> 单一主修
+      // 若前两名合计占据 85% 以上 -> 双修
+      if (deltas[0].val / deltaB >= 0.7) {
+        type = "Single";
+        color = deltas[0].color;
+        label = deltas[0].name;
+      } else if ((deltas[0].val + deltas[1].val) / deltaB >= 0.85) {
+        type = "Hybrid";
+        // 混合色 (简单取个中间渐变或双色条纹逻辑难做，这里用主导色或特殊色)
+        // 这里为了 UI 简单，我们用 "Gradient" 描述，或者由 UI 层渲染
+        // 暂存两个颜色供 UI 使用
+        color = [deltas[0].color, deltas[1].color]; 
+        
+        // 关键修改：对混合属性名进行排序，避免 A+B 与 B+A 被识别为不同阶段
+        const names = [deltas[0].name, deltas[1].name].sort();
+        label = `${names[0]} + ${names[1]}`;
+      }
+
+      // 合并连续阶段
+      if (currentPhase && currentPhase.label === label) {
+        currentPhase.end = bEnd;
+        // 更新结束点的详细属性
+        currentPhase.endStats = {
+            c: d.c[i+1], h: d.h[i+1], m: d.m[i+1], v: d.v[i+1]
+        };
+      } else {
+        if (currentPhase) phases.push(currentPhase);
+        currentPhase = {
+          start: bStart,
+          end: bEnd,
+          label: label,
+          color: color,
+          type: type,
+          // 记录起始点和结束点的详细属性
+          startStats: { c: d.c[i], h: d.h[i], m: d.m[i], v: d.v[i] },
+          endStats: { c: d.c[i+1], h: d.h[i+1], m: d.m[i+1], v: d.v[i+1] }
+        };
+      }
+    }
+    if (currentPhase) phases.push(currentPhase);
+    return phases;
+  },
+
+  /**
    * 解析 SimC 导出的文本数据，并针对魔兽世界的边际收益衰减(DR)分段点进行多项式拟合
    * 
    * @param {string} text - SimC 导出的 dps_plot 原始文本内容
+   * @param {string} [fitMode='auto'] - 拟合策略: 'auto' (智能 R2>=0.99) 或 'linear' (强制一阶)
    */
-  processSimData(text) {
+  processSimData(text, fitMode = 'auto') {
     // 0. 从 UI 获取当前基准值，用于计算正确的 DR 临界点
     ["c", "h", "m", "v"].forEach(
       // @ts-ignore
@@ -257,8 +333,11 @@ const Solver = {
           });
           const r2_lin = 1 - ssres / sstot;
 
-          // 若线性拟合优度 R² 足够高，则使用线性模型
-          if (r2_lin >= 0.999) {
+          // 策略判定
+          const useLinear = fitMode === 'linear' || r2_lin >= 0.99;
+
+          // 若强制线性 或 线性拟合优度 R² 足够高，则使用线性模型
+          if (useLinear) {
             intervals.push({
               limit: cap,
               a2: 0,
@@ -268,7 +347,7 @@ const Solver = {
               type: "Lin",
             });
           } else {
-            // B. 否则执行二阶多项式拟合 (通过克莱姆法则/矩阵消元求解正规方程组)
+            // B. 否则执行二阶多项式拟合
             let s1 = n, s2 = sx, s3 = sxx, s4 = 0, s5 = 0, y1 = sy, y2 = sxy, y3 = 0;
             slice.forEach((/** @type {{x:number, y:number}} */ p) => {
               const x = p.x, x2 = x * x, r = p.y / D0;
