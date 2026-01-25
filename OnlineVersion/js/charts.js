@@ -241,7 +241,8 @@ const ChartManager = {
         labels: labels,
         datasets: [
           {
-            label: "Max Yield Multiplier",
+            // @ts-ignore
+            label: I18N[state.lang].chart_yield_traj || "Max Yield Multiplier",
             data: scores,
             borderColor: "#fbbf24",
             backgroundColor: grad,
@@ -276,6 +277,22 @@ const ChartManager = {
     grad.addColorStop(0, "rgba(34,211,238,0.5)");
     grad.addColorStop(1, "rgba(34,211,238,0)");
     
+    /** @type {any} */
+    const options = this.getCommonLineOptions(false);
+    options.plugins.tooltip.callbacks = {
+      /** @param {any} context */
+      label: (context) => {
+        let label = context.dataset.label || '';
+        if (label) {
+            label += ': ';
+        }
+        if (context.parsed.y !== null) {
+            label += context.parsed.y.toFixed(4);
+        }
+        return label;
+      }
+    };
+
     // @ts-ignore
     this.instances.deltaTrajChart = new Chart(ctx, {
       type: "line",
@@ -283,7 +300,8 @@ const ChartManager = {
         labels: labels.slice(1),
         datasets: [
           {
-            label: "Marginal Gain (Delta)",
+            // @ts-ignore
+            label: I18N[state.lang].chart_delta_traj || "Marginal Gain (Delta)",
             data: dData,
             borderColor: "#22d3ee",
             backgroundColor: grad,
@@ -293,7 +311,7 @@ const ChartManager = {
           },
         ],
       },
-      options: this.getCommonLineOptions(false)
+      options: options
     });
   },
 
@@ -312,10 +330,12 @@ const ChartManager = {
     // @ts-ignore
     if (this.instances.simPreviewChart) this.instances.simPreviewChart.destroy();
     
+    // @ts-ignore
+    const t = I18N[state.lang];
     /** @type {any[]} */
     const datasets = [
       {
-        label: "SimC Raw Data",
+        label: t.sim_import_title || "SimC Raw Data",
         // @ts-ignore
         data: data.points,
         type: "scatter",
@@ -342,7 +362,7 @@ const ChartManager = {
       
       const op = 1 - i * 0.25;
       datasets.push({
-        label: `Interval ${i + 1} (${inv.type})`,
+        label: `${t.sim_table_int || "Interval"} ${i + 1} (${inv.type})`,
         data: seg,
         type: "line",
         borderColor: `rgba(${k === "c" ? 239 : k === "h" ? 34 : k === "m" ? 168 : 59}, ${k === "c" ? 68 : k === "h" ? 197 : k === "m" ? 85 : 130}, ${k === "c" ? 68 : k === "h" ? 94 : k === "m" ? 247 : 246}, ${op})`,
@@ -373,11 +393,22 @@ const ChartManager = {
     tb.innerHTML = "";
     // @ts-ignore
     data.intervals.forEach((inv, i) => {
+      // @ts-ignore
+      const start = i === 0 ? 0 : data.intervals[i - 1].limit + 1;
+      const end = inv.limit;
+      const range = `[${start}, ${end}]`;
+
       const eq =
         inv.type === "Lin"
           ? `y=${inv.a1.toExponential(2)}x+${inv.a0.toFixed(3)}`
           : `y=${inv.a2.toExponential(1)}x²+...`;
-      tb.innerHTML += `<tr class="border-b border-slate-800"><td class="p-1 text-xs text-gray-500">T${i + 1}</td><td class="p-1 text-[10px] text-gray-400 font-mono">${eq} <span class="text-indigo-400">R²:${inv.r2.toFixed(3)}</span></td></tr>`;
+      
+      tb.innerHTML += `
+        <tr class="border-b border-slate-800">
+          <td class="p-1 text-[10px] text-gray-500 font-mono">${range}</td>
+          <td class="p-1 text-[10px] text-gray-400 font-mono">${eq}</td>
+          <td class="p-1 text-[10px] text-indigo-400 font-mono">${inv.r2.toFixed(3)}</td>
+        </tr>`;
     });
   },
 

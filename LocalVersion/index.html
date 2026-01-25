@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WoW Stat Solver | v12.0 Final Fix</title>
 
+    <!-- Suppress Tailwind Warning -->
+    <script>
+      (function() {
+        var originalWarn = console.warn;
+        console.warn = function(...args) {
+          if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com should not be used in production')) {
+            return;
+          }
+          originalWarn.apply(console, args);
+        };
+      })();
+    </script>
+
     <!-- Tailwind CSS (Local) -->
     <script src="js/vendor/tailwindcss.js"></script>
 
@@ -125,7 +138,8 @@
         font-size: 0.9rem;
         font-weight: bold;
         padding: 0;
-        width: 100%;
+        flex: 1;
+        width: 0;
         text-align: right;
       }
 
@@ -208,6 +222,27 @@
         color: #cbd5e1;
         font-family: "JetBrains Mono";
       }
+
+      .text-center {
+        text-align: center !important;
+      }
+
+      .mode-label-text {
+        font-weight: 800;
+        color: #ffffff !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* Hide number input spinners */
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input[type="number"] {
+        -moz-appearance: textfield;
+      }
     </style>
   </head>
 
@@ -229,12 +264,6 @@
           >
             WoW Stat Solver
           </h1>
-          <div
-            class="text-[10px] text-gray-500 mt-0.5"
-            data-i18n="app_subtitle"
-          >
-            Greedy Algorithm & Segmented Fit
-          </div>
         </div>
       </div>
       <div class="flex gap-2">
@@ -338,7 +367,7 @@
               type="number"
               id="budgetInput"
               value="28000"
-              class="tiny-input w-full text-right text-base py-2 font-bold text-white border-slate-600 bg-slate-800 rounded focus:border-indigo-500"
+              class="tiny-input w-full text-center text-base py-2 font-bold text-white border-slate-600 bg-slate-800 rounded focus:border-indigo-500"
             />
           </div>
         </div>
@@ -373,14 +402,14 @@
             <button
               onclick="setMode('gain')"
               id="btn-mode-gain"
-              class="px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white"
+              class="px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white border border-transparent"
             >
               GAIN
             </button>
             <button
               onclick="setMode('total')"
               id="btn-mode-total"
-              class="px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white"
+              class="px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white border border-transparent"
             >
               TOTAL
             </button>
@@ -536,10 +565,8 @@
         <div class="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6">
           <!-- Left: Controls -->
           <div class="w-full lg:w-1/3 space-y-5 shrink-0 flex flex-col">
-            <p class="text-xs text-gray-400">
-              Upload `dps_plot` text/csv. <br />
-              <span class="text-indigo-400">Logic:</span>
-              Intervals auto-calculated based on DR tiers relative to Base.
+            <p class="text-xs text-gray-400" data-i18n="sim_upload_guide">
+              Upload Simulation Data File
             </p>
 
             <!-- Base Settings Grid (Replaced single target selector) -->
@@ -603,8 +630,9 @@
               <div class="flex justify-between items-center mb-2">
                 <h4
                   class="text-xs font-bold text-gray-400 uppercase tracking-widest"
+                  data-i18n="sim_preview_title"
                 >
-                  Multi-Stat Fit Preview
+                  Multi-Stat Curve Fit Preview
                 </h4>
                 <!-- Stat selector for preview -->
                 <select
@@ -629,8 +657,9 @@
                   <tr
                     class="text-[9px] text-gray-500 uppercase border-b border-slate-800"
                   >
-                    <th class="py-1 px-2">Interval</th>
-                    <th class="py-1 px-2">Function ($R^2$)</th>
+                    <th class="py-1 px-2" data-i18n="sim_table_int">Interval</th>
+                    <th class="py-1 px-2" data-i18n="sim_table_func">Function</th>
+                    <th class="py-1 px-2" data-i18n="sim_table_r2">$R^2$</th>
                   </tr>
                 </thead>
                 <tbody
@@ -638,7 +667,7 @@
                   class="text-[10px] font-mono text-gray-300"
                 >
                   <tr>
-                    <td colspan="2" class="text-center py-4 text-gray-600">
+                    <td colspan="3" class="text-center py-4 text-gray-600">
                       No data loaded
                     </td>
                   </tr>
@@ -697,7 +726,7 @@
               <h4
                 class="text-sm font-bold text-purple-400 uppercase tracking-widest"
               >
-                <i class="fa-solid fa-percent mr-2"></i>绿字成长路线 (%)
+                <i class="fa-solid fa-percent mr-2"></i><span data-i18n="chart_pct_traj">绿字成长路线 (%)</span>
               </h4>
             </div>
             <div class="h-[250px] w-full relative">
@@ -711,8 +740,7 @@
               <h4
                 class="text-sm font-bold text-blue-400 uppercase tracking-widest"
               >
-                <i class="fa-solid fa-code-branch mr-2"></i>绿字分配路线
-                (Rating)
+                <i class="fa-solid fa-code-branch mr-2"></i><span data-i18n="chart_rating_traj">绿字分配路线 (Rating)</span>
               </h4>
             </div>
             <div class="h-[250px] w-full relative">
@@ -720,7 +748,7 @@
             </div>
             <!-- Strategy Phases -->
             <div class="mt-4 px-2">
-               <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Strategy Phases</h5>
+               <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2" data-i18n="chart_strategy_phases">Strategy Phases</h5>
                <div id="trajPhases" class="flex h-4 w-full rounded overflow-hidden relative z-10"></div>
                <!-- X-Axis -->
                <div id="trajAxis" class="relative h-4 w-full text-[9px] text-gray-500 font-mono mt-0.5 select-none"></div>
@@ -737,8 +765,7 @@
               <h4
                 class="text-sm font-bold text-yellow-500 uppercase tracking-widest"
               >
-                <i class="fa-solid fa-seedling mr-2"></i>总收益增长曲线 (Total
-                Yield)
+                <i class="fa-solid fa-seedling mr-2"></i><span data-i18n="chart_yield_traj">总收益增长曲线 (Total Yield)</span>
               </h4>
             </div>
             <div class="h-[250px] w-full relative">
@@ -752,8 +779,7 @@
               <h4
                 class="text-sm font-bold text-cyan-400 uppercase tracking-widest"
               >
-                <i class="fa-solid fa-wave-square mr-2"></i>边际收益变化
-                (Marginal Delta)
+                <i class="fa-solid fa-wave-square mr-2"></i><span data-i18n="chart_delta_traj">边际收益变化 (Marginal Delta)</span>
               </h4>
             </div>
             <div class="h-[250px] w-full relative">
@@ -907,18 +933,18 @@
             <input
               type="number"
               step="0.1"
-              class="tiny-input w-full base-input text-indigo-300 font-mono text-right"
+              class="tiny-input w-full base-input text-indigo-300 font-mono text-center"
             />
           </div>
           <div class="flex flex-col">
             <label
               class="text-[9px] text-gray-500 uppercase font-bold mb-1 conv-label"
-              >1% CONV</label
+              >1% CONV /1%</label
             >
             <input
               type="number"
               step="10"
-              class="tiny-input w-full conv-input text-gray-400 font-mono text-right"
+              class="tiny-input w-full conv-input text-gray-400 font-mono text-center"
             />
           </div>
         </div>
@@ -928,9 +954,9 @@
           class="grid grid-cols-12 gap-1 px-3 pt-2 pb-1 text-[8px] text-gray-500 uppercase font-bold bg-[#0f172a]"
         >
           <div class="col-span-3 text-center card_cap">CAP</div>
-          <div class="col-span-2 text-center">a2 ($x^2$)</div>
-          <div class="col-span-3 text-center">a1 ($x$)</div>
-          <div class="col-span-3 text-center">a0 (b)</div>
+          <div class="col-span-2 text-center katex-header">A_2(x^2)</div>
+          <div class="col-span-3 text-center katex-header">A_1(x)</div>
+          <div class="col-span-3 text-center katex-header">A_0</div>
           <div class="col-span-1"></div>
         </div>
 

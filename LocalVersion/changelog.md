@@ -1,5 +1,26 @@
 # Changelog - LocalVersion (Localized Edition)
 
+## [v1.4.0] - 2026-01-25
+### Added
+- **Custom DR Logic**: Implemented a new, non-linear Diminishing Returns (DR) curve logic with custom efficiency tiers (30-40% @ 0.9, ... 80-200% @ 0.5).
+- **Mastery Scaling**: Added logic to dynamically scale Mastery DR thresholds based on its conversion ratio relative to Crit.
+- **Reverse Math Utils**: Added `getPanelRating` and `percentToRating` to reverse-calculate Rating from Panel %.
+- **UI Localization**: Added full localization support for Chart titles ("Growth Trajectory", etc.) and Strategy Phase labels ("Single", "Mixed", "Crit + Haste").
+- **TOTAL Mode Interactions**: Completely reworked "Custom Build" inputs in TOTAL mode to accept Panel Percent values, automatically calculating and displaying the breakdown of "Base + Allocated" rating.
+
+### Changed
+- **UI Styling**: 
+  - Centralized text alignment for Budget and Stat Base inputs.
+  - Enhanced contrast (Bold/White) for active Mode toggle buttons.
+  - Optimized layout for input prefixes to ensure single-line display.
+  - Hidden numeric input spinners for a cleaner look.
+- **Chart Precision**: Marginal Delta chart tooltips now display 4 decimal places for precision.
+- **Project Structure**: Updated `structure.md` to reflect new utility functions.
+
+### Fixed
+- **Compiler Errors**: Resolved all JSDoc/TypeScript strict mode errors in `utils.js`, `solver.js`, `charts.js`, and `main.js`.
+- **Tailwind Warning**: Suppressed the console warning regarding Tailwind CDN usage in production.
+
 ## [v1.3.0] - 2026-01-24
 ### Added
 - **Strategy Phase Analysis**: New feature in Growth Trajectory to automatically identify and list allocation strategies (Single/Hybrid) across different budget ranges.

@@ -177,16 +177,17 @@ const Solver = {
 
       // 计算各属性增量
       const deltas = [
-        { k: 'c', val: d.c[i+1] - d.c[i], color: '#ef4444', name: 'Crit' },
-        { k: 'h', val: d.h[i+1] - d.h[i], color: '#22c55e', name: 'Haste' },
-        { k: 'm', val: d.m[i+1] - d.m[i], color: '#a855f7', name: 'Mast' },
-        { k: 'v', val: d.v[i+1] - d.v[i], color: '#3b82f6', name: 'Vers' }
+        { k: 'c', val: d.c[i+1] - d.c[i], color: '#ef4444', name: 'c' },
+        { k: 'h', val: d.h[i+1] - d.h[i], color: '#22c55e', name: 'h' },
+        { k: 'm', val: d.m[i+1] - d.m[i], color: '#a855f7', name: 'm' },
+        { k: 'v', val: d.v[i+1] - d.v[i], color: '#3b82f6', name: 'v' }
       ];
 
       // 排序找主导属性
       deltas.sort((a, b) => b.val - a.val);
 
       let type = "Mixed";
+      /** @type {string | string[]} */
       let color = "#64748b"; // gray
       let label = "Mixed";
 

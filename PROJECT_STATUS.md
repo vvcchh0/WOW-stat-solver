@@ -1,8 +1,8 @@
 # Project Status & Architecture Log
 
-**Last Updated:** 2026-01-24
+**Last Updated:** 2026-01-25
 **Project:** WoW Stat Solver
-**Current Version:** v1.3.0
+**Current Version:** v1.4.0
 
 ## 1. Directory Structure
 The project follows a "Monorepo-like" structure to support both offline and online usage.
@@ -29,26 +29,24 @@ Root/
 ```
 
 ## 2. Recent Work (Completed)
-*   **Stat Priority Engine & Analysis**:
-    *   Implemented high-resolution (Step: 500) Growth Trajectory simulation.
-    *   Developed a **Strategy Phase Analyzer** to identify "Single-stat" vs "Hybrid" allocation phases.
-    *   Added visual "Strategy Phase Bar" and "Phase Details List" with tooltips for precise budget planning.
-*   **SimC Import Optimization**:
-    *   Added **Fit Strategy Selector**: "Smart (Auto)" (Linear if $R^2 \ge 0.99$, else Quadratic) and "Force Linear".
-    *   Implemented **Real-time Re-fitting**: Charts and models update instantly upon changing Base Ratings or Fit Strategy.
-    *   Cached raw SimC data for seamless on-the-fly analysis.
-*   **Algorithm & Precision**:
-    *   Improved Greedy Algorithm precision by adding a $1$ unit step size (`[100, 25, 5, 1]`).
-    *   Relaxed linear fit threshold to $0.99$ for better stability.
-*   **Documentation**:
-    *   Completed LaTeX documentation parts 1-3 covering definitions, core logic, UI features, and advanced analysis tools.
-    *   Standardized all LaTeX equations in `原理2.tex` to be flush-left using `flalign*`.
+*   **Core Math & DR Logic**:
+    *   **New DR Curve**: Implemented a comprehensive custom DR curve (30-40% @ 0.9 ... 80-200% @ 0.5).
+    *   **Mastery Scaling**: Added dynamic scaling for Mastery thresholds based on conversion ratios.
+    *   **Reverse Calculation**: Added `percentToRating` and `getPanelRating` to support reverse-deriving Rating from Panel Percent.
+*   **UI/UX Improvements**:
+    *   **TOTAL Mode Overhaul**: "Custom Build" inputs in TOTAL mode now accept Panel Percent and auto-calculate/display the corresponding "Base + Allocated" Rating.
+    *   **Visual Enhancements**: Added bold/white styling to active mode buttons, centralized numeric inputs, and optimized input prefixes for better alignment.
+    *   **Localization**: Full localization for Chart titles, Strategy Phases, and Tooltips.
+    *   **Clean Up**: Hidden numeric input spinners and suppressed Tailwind CDN warnings.
+*   **Code Quality**:
+    *   **Strict Type Checking**: Fixed all JSDoc type errors in `utils.js`, `solver.js`, `charts.js`, and `main.js` to satisfy strict compiler checks.
+    *   **Documentation**: Updated `structure.md` with new utility functions.
 
 ## 3. Pending Tasks
-*   **UI/UX Polish**: Refine transition animations for the dashboard (if needed) and ensure cross-browser compatibility for the new phase bar.
-*   **Logic Modularization**: Consider transition to ES Modules (ESM) if the environment allows, to remove global variable dependencies.
+*   **Future Feature**: Specialized "Trinket/Proc" simulation support.
+*   **Refactoring**: Potential ESM migration (low priority).
 
 ## 4. How to Resume
 1.  **Read this file**: `read_file PROJECT_STATUS.md`
 2.  **Verify Parity**: Ensure any new logic is applied to both versions.
-3.  **Future Feature**: Start implementing specialized "Trinket/Proc" simulation support if requested.
+3.  **Check Changelog**: Refer to `LocalVersion/changelog.md` for detailed version history.

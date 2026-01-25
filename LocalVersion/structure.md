@@ -22,8 +22,11 @@
 * **evalPoly(x, a2, a1, a0)**: 多项式求值。
 * **getActiveInterval(statKey, x)**: 确定当前数值落在哪个分段区间。
 * **getMultiplier(statKey, x)**: 计算特定属性在特定数值下的收益倍率。
-* **ratingToPercent(...)**: 处理魔兽世界官方的衰减（DR）机制转换逻辑。
+* **getDRTiers(statKey)**: 获取包含精通缩放逻辑的递减阈值表。
+* **ratingToPercent(rating, statKey)**: 处理魔兽世界官方的衰减（DR）机制转换逻辑 (Rating -> %)。
+* **percentToRating(percent, statKey)**: 逆向计算逻辑 (% -> Rating)。
 * **getPanelPercent(statKey, rating)**: 获取面板最终显示的百分比。
+* **getPanelRating(statKey, panelPercent)**: 逆向计算面板对应的总 Rating。
 * **calculateTotalScore(results)**: 计算所有属性乘积后的总评分。
 
 ---

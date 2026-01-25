@@ -54,43 +54,113 @@ const Utils = {
   },
 
   /**
-   * [核心机制] 实现魔兽世界官方的“收益递减 (DR)”算法
-   * 将原始绿字按阶梯扣减：
-   * 0-30%: 100% 转化
-   * 30-39%: 90% 转化
-   * 39-47%: 80% 转化
-   * ...以此类推
-   * @param {number} rating
-   * @param {number} conversion
-   * @param {number} baseLimit
-   * @param {number} stepLimit
-   * @returns {number}
+   * [DR 阈值获取] 获取指定属性的递减阈值 (百分比) 及对应效率
+   * 包含精通的特殊缩放逻辑 (按爆击转化比/精通转化比放大)
+   * 
+   * Tiers (Raw %):
+   * 0-30%: 1.0
+   * 30-40%: 0.9
+   * 40-50%: 0.8
+   * 50-60%: 0.7
+   * 60-80%: 0.6
+   * 80-200%: 0.5
+   * >200%: 0.0
+   * @param {string} statKey
+   * @returns {{limit: number, eff: number}[]}
    */
-  ratingToPercent(rating, conversion, baseLimit, stepLimit) {
-    let rawPct = rating / conversion;
-    let eff = 0; 
-    let rem = rawPct;
-
-    // 阶段 0: 100% 转化区间 (基础上限)
-    let baseLimitPct = baseLimit / conversion;
-    let stepPct = stepLimit / conversion;
-
-    let chunk = Math.min(rem, baseLimitPct);
-    eff += chunk;
-    rem -= chunk;
-    if (rem <= 0) return eff;
-
-    // 阶段 1-4: 每增加 stepLimit 等级，转化率依次下降 10%
-    for (let i = 1; i <= 4; i++) {
-      chunk = Math.min(rem, stepPct);
-      eff += chunk * (1 - i * 0.1);
-      rem -= chunk;
-      if (rem <= 0) return eff;
+  getDRTiers(statKey) {
+    // @ts-ignore
+    const critConv = state.stats.c.conv || 700;
+    // @ts-ignore
+    const myConv = state.stats[statKey].conv || 700;
+    
+    // 精通缩放系数
+    let scale = 1.0;
+    if (statKey === 'm') {
+      scale = critConv / myConv;
     }
 
-    // 阶段 5: 最终保底转化率 (50%)
-    eff += rem * 0.5;
+    // 定义原始百分比阈值 (不含 0 起点)
+    // 结构: [UpperLimit(%), Efficiency]
+    return [
+      { limit: 30 * scale, eff: 1.0 },
+      { limit: 40 * scale, eff: 0.9 },
+      { limit: 50 * scale, eff: 0.8 },
+      { limit: 60 * scale, eff: 0.7 },
+      { limit: 80 * scale, eff: 0.6 },
+      { limit: 200 * scale, eff: 0.5 },
+      { limit: Infinity, eff: 0.0 }
+    ];
+  },
+
+  /**
+   * [核心机制] 实现魔兽世界官方的“收益递减 (DR)”算法
+   * 将原始绿字按阶梯扣减
+   * @param {number} rating - 原始绿字等级
+   * @param {string} statKey - 属性 Key (c, h, m, v)
+   * @returns {number} 转化后的有效百分比
+   */
+  ratingToPercent(rating, statKey) {
+    // @ts-ignore
+    const conversion = state.stats[statKey].conv || 700;
+    const rawPct = rating / conversion;
+    const tiers = this.getDRTiers(statKey);
+    
+    let eff = 0;
+    let processedRaw = 0; // 已处理的 Raw Percent
+
+    for (let i = 0; i < tiers.length; i++) {
+      const tier = tiers[i];
+      const tierStart = i === 0 ? 0 : tiers[i-1].limit;
+      const tierWidth = tier.limit - tierStart;
+      
+      // 当前这一层能容纳多少 raw
+      const remainingRaw = Math.max(0, rawPct - processedRaw);
+      const chunk = Math.min(remainingRaw, tierWidth);
+      
+      eff += chunk * tier.eff;
+      processedRaw += chunk;
+      
+      if (rawPct <= tier.limit) break;
+    }
+    
     return eff;
+  },
+
+  /**
+   * [核心机制逆运算] 从转化后的百分比反推需要的 Raw Rating
+   * @param {number} percent - 期望的转化后有效百分比 (不含面板基础%)
+   * @param {string} statKey
+   * @returns {number}
+   */
+  percentToRating(percent, statKey) {
+    // @ts-ignore
+    const conversion = state.stats[statKey].conv || 700;
+    const tiers = this.getDRTiers(statKey);
+    
+    let remEff = percent;
+    let rawPct = 0;
+
+    for (let i = 0; i < tiers.length; i++) {
+      const tier = tiers[i];
+      if (tier.eff === 0) break; // 之后的效率为 0，无法反推
+
+      const tierStart = i === 0 ? 0 : tiers[i-1].limit;
+      const tierRawWidth = tier.limit - tierStart;
+      const tierEffCapacity = tierRawWidth * tier.eff; // 这一层能提供的最大有效百分比
+
+      const chunkEff = Math.min(remEff, tierEffCapacity);
+      const chunkRaw = chunkEff / tier.eff; // 反推需要的 Raw
+      
+      rawPct += chunkRaw;
+      remEff -= chunkEff;
+
+      if (remEff <= 0.000001) break;
+    }
+    
+    // 如果还有剩余 eff (溢出 200% 或进入 0 效率区)，则无法通过正常手段获得
+    // 这里简单返回当前计算值
+    return rawPct * conversion;
   },
 
   /**
@@ -104,29 +174,34 @@ const Utils = {
     // @ts-ignore
     const s = state.stats[statKey];
     const totalR = rating + s.statBase; 
-    // @ts-ignore
-    const config = STAT_CONFIG[statKey];
+    
+    return s.basePct + this.ratingToPercent(totalR, statKey);
+  },
 
-    return (
-      s.basePct +
-      this.ratingToPercent(totalR, s.conv, config.base_limit, config.step_limit)
-    );
+  /**
+   * [逆向运算] 根据面板百分比反推需要的总 Rating (含 Base)
+   * @param {string} statKey
+   * @param {number} panelPercent
+   * @returns {number}
+   */
+  getPanelRating(statKey, panelPercent) {
+    // @ts-ignore
+    const s = state.stats[statKey];
+    const effectivePct = Math.max(0, panelPercent - s.basePct);
+    return this.percentToRating(effectivePct, statKey);
   },
 
   /**
    * [全局评估] 计算全属性组合后的总收益 (Multiplicative Gain)
    * Solver 优化的终极目标就是最大化此函数返回值
-   * @param {Object} results
-   * @param {number} results.c
-   * @param {number} results.h
-   * @param {number} results.m
-   * @param {number} results.v
+   * @param {{c: number, h: number, m: number, v: number}} results
    * @returns {number}
    */
   calculateTotalScore(results) {
     let total = 1.0;
     ["c", "h", "m", "v"].forEach((k) => {
-      total *= this.getMultiplier(k, results[/** @type {keyof typeof results} */ (k)]);
+      // @ts-ignore
+      total *= this.getMultiplier(k, results[k]);
     });
     return total;
   },

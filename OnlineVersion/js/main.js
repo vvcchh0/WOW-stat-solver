@@ -117,7 +117,7 @@ function updateUI() {
     /** @type {HTMLElement} */ (ctr.querySelector(".stat-mult-display")).innerText = m.toFixed(4);
     /** @type {HTMLElement} */ (ctr.querySelector(".panel-percent-display")).innerText =
       // @ts-ignore
-      Utils.getPanelPercent(k, val).toFixed(1) + "%";
+      "+" + Utils.getPanelPercent(k, val).toFixed(1) + "%";
     
     // 累计总收益
     tm *= m;
@@ -175,11 +175,30 @@ function renderCustomInputs() {
     // @ts-ignore
     const name = state.lang === "zh" ? STAT_CONFIG[k].name_zh : STAT_CONFIG[k].name_en;
     let pre = "";
-    // @ts-ignore
-    if (state.displayMode === "total") {
-      // @ts-ignore
-      pre = `<span class="base-prefix">${state.stats[k].statBase} +</span>`;
+    let val = state.customValues[k];
+    let suffix = "";
+    
+    if (state.displayMode === "gain") {
+      // GAIN Mode: Show Base + Allocated
+      pre = `<div class="flex items-center shrink-0 mr-2"><span class="base-prefix">${state.stats[k].statBase} +</span></div>`;
+    } else {
+       // TOTAL Mode
+       // Value is Panel Percent
+       // @ts-ignore
+       val = Utils.getPanelPercent(k, val).toFixed(2);
+       suffix = `<span class="text-gray-500 ml-0.5 font-mono text-[10px]">%</span>`;
+       
+       // Prefix: Base (Gray) + Allocated (White/Bold)
+       // @ts-ignore
+       const allocated = Math.round(state.customValues[k]);
+       // @ts-ignore
+       const base = state.stats[k].statBase;
+       pre = `<div class="flex items-center shrink-0 mr-1">
+                <span class="text-[10px] text-gray-500 font-mono">${base} +</span>
+                <span id="prefix_alloc_${k}" class="text-[10px] text-white font-bold font-mono ml-1">${allocated}</span>
+              </div>`;
     }
+
     // @ts-ignore
     ctr.innerHTML += `
       <div class="flex items-center gap-3">
@@ -188,8 +207,9 @@ function renderCustomInputs() {
           <label class="text-[10px] text-gray-500 block uppercase font-bold">${name}</label>
           <div class="custom-input-wrapper">
             ${pre}
-            <input type="number" id="curr_${k}" value="${state.customValues[k]}" 
+            <input type="number" id="curr_${k}" value="${val}" 
                    class="custom-input-clean" oninput="updateComparisonLogic(this.value,'${k}')">
+            ${suffix}
           </div>
         </div>
       </div>`;
@@ -301,6 +321,21 @@ function renderStatCard(key) {
   // E. 属性起始基准值 (Stat Base)
   // @ts-ignore
   /** @type {HTMLElement} */ (tpl.querySelector(".base-rating-display")).innerText = String(state.stats[key].statBase);
+  
+  // Update Tooltip
+  const infoIcon = tpl.querySelector(".fa-circle-info");
+  if (infoIcon) {
+    const separator = state.lang === "zh" ? "" : " ";
+    // @ts-ignore
+    infoIcon.title = (tText.card_base_tooltip || "Sim Base") + separator + (state.lang === "zh" ? config.name_zh : config.name_en);
+  }
+
+  // Render KaTeX headers
+  tpl.querySelectorAll(".katex-header").forEach((el) => {
+    // @ts-ignore
+    katex.render(el.innerText, el, { throwOnError: false });
+  });
+
   // @ts-ignore
   tpl.querySelector(".set-base-btn").addEventListener("click", openBaseModal);
 
@@ -490,12 +525,12 @@ function setMode(mode) {
   const t = I18N[state.lang];
 
   if (mode === "gain") {
-    /** @type {HTMLElement} */ (btnGain).className = "px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white";
-    /** @type {HTMLElement} */ (btnTotal).className = "px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white";
+    /** @type {HTMLElement} */ (btnGain).className = "px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white border border-transparent";
+    /** @type {HTMLElement} */ (btnTotal).className = "px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white border border-transparent";
     labels.forEach((l) => (/** @type {HTMLElement} */ (l).innerText = t.mode_gain_text));
   } else {
-    /** @type {HTMLElement} */ (btnGain).className = "px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white";
-    /** @type {HTMLElement} */ (btnTotal).className = "px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white";
+    /** @type {HTMLElement} */ (btnGain).className = "px-3 py-1 text-[10px] font-bold rounded transition text-gray-400 hover:text-white border border-transparent";
+    /** @type {HTMLElement} */ (btnTotal).className = "px-3 py-1 text-[10px] font-bold rounded transition bg-indigo-600 text-white border border-transparent";
     labels.forEach((l) => (/** @type {HTMLElement} */ (l).innerText = t.mode_total_text));
   }
 
@@ -716,8 +751,26 @@ function openTrajectoryModal() {
       el.style.width = `${width}%`;
       el.style.height = "100%";
       
+      const t = I18N[state.lang];
+      let localizedLabel = p.label;
+      
+      if (p.label === "Mixed") {
+        localizedLabel = state.lang === "zh" ? "混合" : "Mixed";
+      } else {
+        // Handle "c" or "c + h"
+        localizedLabel = p.label.split(" + ").map(key => {
+           // @ts-ignore
+           return t["stat_" + key] || key; 
+        }).join(" + ");
+      }
+
+      /** @param {any} s */
       const fmtStats = (s) => `C:${s.c} H:${s.h} M:${s.m} V:${s.v}`;
-      const tooltipText = `${p.label}\nRange: ${p.start} -> ${p.end}\n\nStart: ${fmtStats(p.startStats)}\nEnd:   ${fmtStats(p.endStats)}`;
+      const rangeText = state.lang === "zh" ? "范围" : "Range";
+      const startText = state.lang === "zh" ? "起点" : "Start";
+      const endText = state.lang === "zh" ? "终点" : "End";
+
+      const tooltipText = `${localizedLabel}\n${rangeText}: ${p.start} -> ${p.end}\n\n${startText}: ${fmtStats(p.startStats)}\n${endText}:   ${fmtStats(p.endStats)}`;
       el.title = tooltipText;
       
       let bgStyle = "";
@@ -742,7 +795,7 @@ function openTrajectoryModal() {
            iconStyle = `background: ${p.color}`;
         }
 
-        lItem.innerHTML = `<span class="w-3 h-3 rounded-full block" style="${iconStyle}"></span><span>${p.label}</span>`;
+        lItem.innerHTML = `<span class="w-3 h-3 rounded-full block" style="${iconStyle}"></span><span>${localizedLabel}</span>`;
         legendContainer.appendChild(lItem);
       }
 
@@ -761,7 +814,7 @@ function openTrajectoryModal() {
       listItem.innerHTML = `
         <div class="flex items-center gap-2">
            <span class="w-2 h-2 rounded-full" style="${dotStyle}"></span>
-           <span class="font-bold text-gray-300">${p.label}</span>
+           <span class="font-bold text-gray-300">${localizedLabel}</span>
         </div>
         <div class="font-mono text-gray-400">
            <span class="text-indigo-400">${p.start}</span> <i class="fa-solid fa-arrow-right text-[8px] mx-1"></i> <span class="text-indigo-400">${p.end}</span>
@@ -841,13 +894,35 @@ function resetApp() {
 }
 
 /**
- * 更新用户自定义 green 数值逻辑
+ * 更新用户自定义绿字数值逻辑
  * @param {string} v
  * @param {string} k
  */
 function updateComparisonLogic(v, k) {
+  let val = parseFloat(v) || 0;
+  
   // @ts-ignore
-  state.customValues[k] = parseFloat(v) || 0;
+  if (state.displayMode === "total") {
+     // Input is Percent -> Convert to Allocated Rating
+     // @ts-ignore
+     const totalRating = Utils.getPanelRating(k, val);
+     // @ts-ignore
+     const allocated = Math.max(0, totalRating - state.stats[k].statBase);
+     
+     // Update state
+     // @ts-ignore
+     state.customValues[k] = allocated;
+     
+     // Live update the allocated rating display text
+     const allocDisplay = document.getElementById(`prefix_alloc_${k}`);
+     if (allocDisplay) allocDisplay.innerText = Math.round(allocated).toString();
+     
+  } else {
+     // Input is Allocated Rating
+     // @ts-ignore
+     state.customValues[k] = val;
+  }
+
   updateComparison();
 }
 
