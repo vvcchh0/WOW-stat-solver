@@ -699,14 +699,11 @@ function applySimData() {
 function openTrajectoryModal() {
   // @ts-ignore
   const { labels, d } = Solver.generateTrajectory();
-  // @ts-ignore
-  ChartManager.renderPercentTrajChart(labels, d.pcts);
-  // @ts-ignore
-  ChartManager.renderTrajectoryChart(labels, d);
-  // @ts-ignore
-  ChartManager.renderYieldTrajChart(labels, d.scores);
-  // @ts-ignore
-  ChartManager.renderDeltaTrajChart(labels, d.scores);
+    ChartManager.renderTrajectoryChart(labels, d);
+    ChartManager.renderPercentTrajChart(labels, d.pcts);
+    ChartManager.renderYieldTrajChart(labels, d.scores);
+    // 传递完整数据对象以便访问 smoothScores
+    ChartManager.renderDeltaTrajChart(labels, d);
 
   // 渲染策略阶段条
   // @ts-ignore

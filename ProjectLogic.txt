@@ -1,0 +1,802 @@
+================================================================================
+                        WOW Stat Solver 项目逻辑完整分析
+================================================================================
+文档版本：2026-02-28
+分析范围：OnlineVersion/js/ 核心代码
+================================================================================
+
+一、项目架构概述
+================================================================================
+
+WOW Stat Solver 是一个魔兽世界绿字（副属性）最优分配求解器，基于贪婪算法
+和 SimC 模拟数据拟合，帮助玩家找到在给定预算下收益最高的属性分配方案。
+
+核心模块：
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  config.js  → 配置与状态定义（单一数据源）                                  │
+│  utils.js   → 数学核心（多项式计算、DR 机制、收益评估）                      │
+│  solver.js  → 优化算法（贪婪算法、SimC 数据拟合、配置导入导出）             │
+│  charts.js  → 可视化（Chart.js 图表渲染）                                   │
+│  main.js    → DOM 交互入口（事件绑定、UI 渲染、模态框管理）                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+加载顺序（index.html）：
+  config.js → utils.js → solver.js → charts.js → main.js
+
+
+二、运行时数据流
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  用户操作 (滑动预算/导入 SimC/修改区间/锁定属性...)                          │
+└─────────────────────┬───────────────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  main.js 事件处理函数 → 修改 state                                          │
+└─────────────────────┬───────────────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Solver.runSolver()                                                         │
+│  ├─ solveOptimalDistribution() [贪婪算法]                                  │
+│  │   └─ Utils.getMultiplier() [查询分段多项式]                             │
+│  └─ 更新 state.optResults                                                  │
+└─────────────────────┬───────────────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  updateUI()                                                                 │
+│  ├─ 更新卡片数值/公式 (KaTeX)                                              │
+│  ├─ renderCustomInputs()                                                   │
+│  ├─ ChartManager.updateCharts() [环形图]                                   │
+│  └─ updateComparison() [自定义对比]                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+三、数学模型
+================================================================================
+
+3.1 核心公式
+------------------------------------------------------------------------------
+
+总伤害模型（乘法模型）：
+    D = D₀ × C × H × M × V
+
+其中：
+  - D₀: 基准伤害（绿字为 0 时的伤害）
+  - C, H, M, V: 爆击、急速、精通、全能的收益倍率函数
+
+收益倍率函数（分段多项式）：
+    f(x) = a₂x² + a₁x + a₀
+
+最优解条件（等边际收益原理）：
+    ∂C/(C∂c) = ∂H/(H∂h) = ∂M/(M∂m) = ∂V/(V∂v)
+
+即各属性的相对边际收益相等时达到最优分配。
+
+
+3.2 收益递减（DR）机制
+------------------------------------------------------------------------------
+
+魔兽世界官方 DR 公式（阶梯递减）：
+
+  百分比区间      效率
+  ──────────────────────
+  0-30%          100%
+  30-40%          90%
+  40-50%          80%
+  50-60%          70%
+  60-80%          60%
+  80-200%         50%
+  >200%            0%
+
+精通倍数（Mastery Scale）：
+  scale = critConv / masteryConv
+
+  精通的 DR 阈值会按 scale 放大：
+  - 第一阈值：30% × scale
+  - 第二阈值：40% × scale
+  - ...
+
+  默认情况下 critConv = masteryConv = 700，scale = 1.0
+
+
+四、核心算法详解
+================================================================================
+
+4.1 贪婪算法（Greedy Algorithm）
+------------------------------------------------------------------------------
+
+文件：solver.js - solveOptimalDistribution()
+
+算法流程：
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. 处理锁定属性                                                            │
+│     锁定属性优先占用预算，剩余预算用于分配                                  │
+│                                                                             │
+│  2. 大步长分配（step=100）                                                  │
+│     while (available >= 200):  # 保留余量给微调                             │
+│       对每个未锁定属性 k:                                                   │
+│         curM = getMultiplier(k, currentVal)                                 │
+│         nextM = getMultiplier(k, currentVal + 100)                          │
+│         gain = nextM / curM  # 相对收益率                                   │
+│       选择 gain 最大的属性，分配 100 点                                      │
+│                                                                             │
+│  3. 小步长微调（step=1）                                                    │
+│     while (available >= 1):                                                 │
+│       同上，选择 gain 最大的属性，分配 1 点                                  │
+│                                                                             │
+│  4. 处理剩余余量                                                            │
+│     将不足 1 点的余量一次性分配给当前收益最高的属性                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+关键代码：
+```javascript
+const stepSizes = [100, 1];
+stepSizes.forEach((step, index) => {
+  const isLastStep = index === stepSizes.length - 1;
+  const threshold = isLastStep ? step : step * 2;  // 保留余量
+
+  while (available >= threshold) {
+    let bestStat = null;
+    let maxGain = -1;
+
+    unlocked.forEach((k) => {
+      const curM = Utils.getMultiplier(k, results[k]) || 0.00001;
+      const nextM = Utils.getMultiplier(k, results[k] + step);
+      const gain = nextM / curM;  // 相对收益率
+
+      if (gain > maxGain) {
+        maxGain = gain;
+        bestStat = k;
+      }
+    });
+
+    if (bestStat) {
+      results[bestStat] += step;
+      available -= step;
+    }
+  }
+});
+```
+
+算法正确性证明：
+1. 状态函数无后效性：最终结果只取决于终点坐标，与路径无关
+2. 自动纠偏机制：
+   - 自身负反馈：收益递减使过度投资的属性优先级下降
+   - 交叉正反馈：乘法模型使其他属性收益率随当前属性增加而提升
+3. 离散梯度上升：步长从粗到细，锯齿状路径无限逼近理想梯度流曲线
+
+
+4.2 SimC 数据拟合
+------------------------------------------------------------------------------
+
+文件：solver.js - processSimData()
+
+拟合流程：
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. 解析 SimC dps_plot 文本                                                 │
+│     提取各属性的 rating-x 和 DPS-y 数据点                                   │
+│                                                                             │
+│  2. 根据 DR 阈值分段                                                        │
+│     分段点：base_limit, base_limit+step_limit, base_limit+2*step_limit     │
+│                                                                             │
+│  3. 每段独立拟合                                                            │
+│     a) 线性回归：y = a₁x + a₀                                               │
+│        计算 R² 线性                                                         │
+│     b) 若 R²线性 ≥ 0.99 或 fitMode='linear'，使用线性模型                   │
+│     c) 否则执行二阶多项式拟合：y = a₂x² + a₁x + a₀                          │
+│        使用高斯消元法解正规方程组                                           │
+│                                                                             │
+│  4. 存储拟合结果                                                            │
+│     intervals: [{limit, a2, a1, a0, r2, type}, ...]                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+线性回归公式：
+  a₁ = (n·Σxy - Σx·Σy) / (n·Σx² - (Σx)²)
+  a₀ = (Σy - a₁·Σx) / n
+
+R² 计算公式：
+  R² = 1 - SSres/SStot
+  SSres = Σ(yᵢ - ŷᵢ)²
+  SStot = Σ(yᵢ - ȳ)²
+
+二阶多项式拟合（高斯消元）：
+  正规方程组：
+  ┌                ┐ ┌   ┐   ┌   ┐
+  │ n    Σx   Σx²  │ │a₀ │   │Σy │
+  │ Σx   Σx²  Σx³  ││a₁ │ = │Σxy│
+  │ Σx²  Σx³  Σx⁴  │ │a₂ │   │Σx²y│
+  └                ┘ └   ┘   └   ┘
+
+
+五、模块详细分析
+================================================================================
+
+5.1 config.js - 配置与状态管理
+------------------------------------------------------------------------------
+
+职责：定义应用的所有静态配置和运行时状态（单一数据源）
+
+核心数据结构：
+
+(1) I18N - 多语言字典
+  - zh/en 两套 UI 文本
+  - 用于 updateLanguageUI() 进行 DOM 文本替换
+
+(2) POLY_DEFAULT - 默认拟合系数
+  { a2: 0, a1: 0.00001, a0: 1.0 }
+  兜底逻辑，防止无 SimC 数据时报错
+
+(3) STAT_CONFIG - 属性元数据
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │ 属性   │ 颜色    │ 图标         │ def_conv │ base_limit │ step_limit   │
+  ├──────────────────────────────────────────────────────────────────────────┤
+  │ 爆击 c │ #ef4444 │ fa-fire      │ 700      │ 21000      │ 7000         │
+  │ 急速 h │ #22c55e │ fa-bolt      │ 660      │ 19600      │ 6600         │
+  │ 精通 m │ #a855f7 │ fa-crown     │ 700      │ 21000      │ 7000         │
+  │ 全能 v │ #3b82f6 │ fa-shield    │ 780      │ 23400      │ 6600         │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+(4) state - 全局运行时状态
+  {
+    lang: "zh",
+    budget: 28000,
+    displayMode: "gain",  // 'gain' | 'total'
+    customValues: { c, h, m, v },
+    stats: {
+      c/h/m/v: {
+        id, locked, lockVal, basePct, statBase, conv, intervals[]
+      }
+    },
+    optResults: { c, h, m, v, score }
+  }
+
+
+5.2 utils.js - 数学核心模块
+------------------------------------------------------------------------------
+
+职责：实现所有与游戏机制相关的数学公式
+
+核心函数：
+
+(1) evalPoly(x, a2, a1, a0)
+    功能：多项式求值
+    公式：f(x) = a₂x² + a₁x + a₀
+
+(2) getActiveInterval(statKey, x)
+    功能：查找 x 所在的拟合区间
+    算法：线性扫描找到第一个 limit > x 的区间
+
+(3) getMultiplier(statKey, x)
+    功能：计算单属性收益倍率
+    返回：f(x) = 当前区间的多项式值
+
+(4) getDRTiers(statKey)
+    功能：获取 DR 阈值表
+    精通倍数：scale = critConv / myConv（仅当 statKey='m'）
+    返回：[{limit: 30*scale, eff: 1.0}, {limit: 40*scale, eff: 0.9}, ...]
+
+(5) ratingToPercent(rating, statKey)
+    功能：绿字等级 → 百分比（含 DR）
+    算法：分段累加 Σ(chunk × eff)
+
+(6) percentToRating(percent, statKey)
+    功能：百分比 → 绿字等级（逆运算）
+    算法：反推 chunkRaw = chunkEff / eff
+
+(7) getPanelPercent(statKey, rating)
+    功能：计算面板显示百分比
+    公式：basePct + ratingToPercent(rating + statBase)
+
+(8) getPanelRating(statKey, panelPercent)
+    功能：根据面板百分比反推总 Rating
+    公式：percentToRating(panelPercent - basePct)
+
+(9) calculateTotalScore(results)
+    功能：计算总收益倍率
+    公式：Score = Π f_k(results[k])
+
+
+5.3 solver.js - 核心优化算法
+------------------------------------------------------------------------------
+
+职责：贪婪算法求解最优分配 + SimC 数据拟合 + 配置导入导出
+
+(1) Solver 命名空间
+
+  solveOptimalDistribution(targetBudget)
+    输入：总绿字预算
+    输出：{c, h, m, v} 最优分配
+    算法：贪婪算法，步长 [100, 1]
+
+  runSolver()
+    功能：执行计算并更新 state.optResults
+
+  generateTrajectory()
+    功能：生成 5k-60k 预算的成长轨迹数据
+    返回：{labels[], d: {c[], h[], m[], v[], scores[], smoothScores[], pcts{}}}
+    关键：预计算断点修正因子消除 SimC 分段拟合跳变
+
+  analyzeTrajectoryPhases(trajData)
+    功能：识别分配策略阶段
+    判定规则：
+      - 单一主修：某属性增量占比 ≥ 70%
+      - 双修：前两属性增量合计占比 ≥ 85%
+      - 混合：其他情况
+
+  processSimData(text, fitMode)
+    功能：解析 SimC dps_plot 文本并分段拟合
+    策略：自动选择线性/二阶（R² ≥ 0.99）
+
+(2) ConfigManager 命名空间
+
+  export()
+    功能：导出配置为.txt 文件
+    格式：自定义文本格式（SPEC BASE, RATING/1%, INTERVAL...）
+
+  import(inp)
+    功能：读取配置文件
+
+  parse(txt)
+    功能：解析配置文本并更新 state
+
+
+5.4 charts.js - 图表可视化
+------------------------------------------------------------------------------
+
+职责：使用 Chart.js 进行数据可视化
+
+图表实例管理：
+  instances: {
+    distChart,         // 最优分配环形图
+    customDistChart,   // 自定义对比环形图
+    trajChart,         // 绿字分配轨迹
+    percentTrajChart,  // 百分比轨迹
+    yieldTrajChart,    // 总收益曲线
+    deltaTrajChart,    // 边际收益变化
+    simPreviewChart    // SimC 拟合预览
+  }
+
+核心函数：
+
+(1) updateCharts()
+    功能：更新主界面两个环形图
+    支持 displayMode 切换（分配值 vs 面板百分比）
+
+(2) renderPercentTrajChart(labels, data)
+    功能：百分比成长轨迹图
+    类型：Line Chart
+
+(3) renderTrajectoryChart(labels, data)
+    功能：绿字分配轨迹图
+    类型：Line Chart
+
+(4) renderYieldTrajChart(labels, scores)
+    功能：总收益增长曲线
+    类型：Line Chart（填充渐变）
+
+(5) renderDeltaTrajChart(labels, scoresOrData)
+    功能：边际收益变化图（Delta Score）
+    关键：使用 smoothScores 消除断点跳变
+    类型：Line Chart（填充渐变）
+
+(6) updateSimPreviewChart()
+    功能：SimC 拟合效果预览
+    类型：Scatter（原始数据）+ Line（拟合曲线）
+
+(7) getCommonLineOptions(showLegend)
+    功能：通用折线图配置
+
+
+5.5 main.js - DOM 交互入口
+------------------------------------------------------------------------------
+
+职责：DOM 事件监听、UI 渲染、跨模块协调
+
+初始化流程：
+  document.addEventListener("DOMContentLoaded", () => {
+    initApp();
+  });
+
+  initApp() {
+    initStats(true);      // 初始化属性卡片
+    renderCards();        // 渲染四个属性卡片
+    绑定事件监听器；
+    Solver.runSolver();   // 执行初始计算
+    updateUI();          // 渲染 UI
+  }
+
+核心函数：
+
+(1) updateUI()
+    功能：更新页面所有数据展示
+    流程：
+      - 更新各属性卡片数值、公式（KaTeX）、倍率、面板百分比
+      - 计算总收益 tm = Π m_k
+      - 更新自定义输入区
+      - 更新图表
+      - 更新对比
+
+(2) setBudget(v)
+    功能：设置绿字预算
+    触发：Slider/Input 事件
+
+(3) renderStatCard(key)
+    功能：渲染单个属性配置卡片
+    内容：
+      - 标题、图标、颜色
+      - 锁定开关 + 输入框
+      - 基础百分比、转化率输入
+      - SimC 模拟起点显示
+      - 拟合区间列表（可编辑/删除）
+      - 添加区间按钮
+
+(4) renderCustomInputs()
+    功能：渲染自定义对比输入区
+    支持 gain/total 模式切换
+
+(5) 模态框管理
+    openBaseModal() / closeBaseModal() / saveBaseSettings()
+    openSimImportModal() / closeSimImportModal() / applySimData()
+    openTrajectoryModal() / closeTrajectoryModal()
+
+(6) 多语言切换
+    toggleLanguage()
+    updateLanguageUI()
+
+(7) 自定义对比
+    updateComparisonLogic(v, k)
+    updateComparison()
+    syncOptimal()
+
+
+六、精通倍数专题
+================================================================================
+
+概念：
+  魔兽世界中，精通属性的转化率可能不同于爆击，导致 DR 阈值的计算需要
+  特殊缩放处理。
+
+代码位置：
+  utils.js - getDRTiers() 函数（第 70-92 行）
+
+公式：
+  scale = critConv / masteryConv
+
+默认值：
+  critConv = 700, masteryConv = 700 → scale = 1.0
+
+影响：
+  DR 阈值 = 原始阈值 × scale
+  - 第一阈值：30% × scale
+  - 第二阈值：40% × scale
+  - ...
+
+示例：
+  若 masteryConv = 180（旧版本）：
+  scale = 700 / 180 ≈ 3.89
+  第一阈值 = 30% × 3.89 ≈ 116.7%（绿字等级）
+
+
+七、架构设计特点
+================================================================================
+
+(1) 单一数据源（Single Source of Truth）
+    所有状态集中在 state 对象，修改 state 后调用 updateUI() 刷新
+
+(2) 响应式更新
+    用户操作 → 修改 state → Solver.runSolver() → updateUI() → Charts
+
+(3) 模块化设计
+    config/utils/solver/charts/main 职责分离
+
+(4) 贪婪算法优势
+    - 规避 DR 断点不可导问题
+    - 自适应 DR 惩罚逻辑
+    - 离散属性点数友好
+
+(5) 分段拟合策略
+    - 自动选择线性/二阶（R² ≥ 0.99）
+    - 高斯消元法解正规方程
+    - 断点修正因子消除跳变
+
+(6) 多语言支持
+    I18N 字典 + updateLanguageUI() 动态刷新
+
+(7) 可视化增强
+    Chart.js 环形图 + 折线图 + 填充渐变
+
+
+八、关键配置参数
+================================================================================
+
+默认预算：28000
+
+成长轨迹范围：5000 - 60000（步长 500）
+
+DR 阈值（百分比）：
+  0-30%: 100% 效率
+  30-40%: 90% 效率
+  40-50%: 80% 效率
+  50-60%: 70% 效率
+  60-80%: 60% 效率
+  80-200%: 50% 效率
+  >200%: 0% 效率
+
+属性转化率（Rating/1%）：
+  爆击：700
+  急速：660
+  精通：700
+  全能：780
+
+贪婪算法步长：[100, 1]
+  - 大步长保留余量：available >= 2 × step
+  - 小步长精确微调：available >= 1
+
+
+九、文件依赖关系
+================================================================================
+
+index.html
+  │
+  ├─→ config.js   (无依赖)
+  │       │
+  ├─→ utils.js    (依赖 state from config.js)
+  │       │
+  ├─→ solver.js   (依赖 Utils from utils.js, state from config.js)
+  │       │
+  ├─→ charts.js   (依赖 state, STAT_CONFIG, I18N from config.js, Utils from utils.js)
+  │       │
+  └─→ main.js     (依赖所有上述模块)
+
+
+十、总结
+================================================================================
+
+WOW Stat Solver 是一个设计精良的前端应用，具有以下特点：
+
+1. 清晰的模块划分：config/utils/solver/charts/main 各司其职
+2. 优雅的算法设计：贪婪算法规避解析解复杂性
+3. 完善的工程实现：SimC 拟合、DR 机制、多语言、可视化
+4. 良好的用户体验：实时计算、图表展示、配置导入导出
+
+核心算法流程：
+  用户输入 → state → Solver(贪婪算法) → updateUI → Charts
+
+数学基础：
+  - 乘法模型：D = D₀ × CHMV
+  - 等边际收益原理：∂C/(C∂c) = ∂H/(H∂h) = ...
+  - 分段多项式拟合：f(x) = a₂x² + a₁x + a₀
+  - DR 递减机制：阶梯效率缩放
+
+
+十一、延拓修正（Extension）- 断点跳变本质修正
+================================================================================
+
+11.1 问题背景
+------------------------------------------------------------------------------
+
+SimC 分段拟合在断点处不连续，导致：
+  - 原始 gain = nextM / curM 在跨越断点时出现剧烈跳变
+  - 贪婪算法可能在断点前停止投资某属性（gain 突降）
+  - Delta Score 图表显示异常跳变
+
+原 smoothScores 修正的不足：
+  1. 仅用于可视化，不反作用于优化算法
+  2. 修正因子累积导致远端失真
+  3. 假设"左侧正确，右侧需对齐"
+  4. 仅函数值连续，导数仍不连续
+  5. 未考虑四属性乘法耦合效应
+
+
+11.2 延拓修正方案
+------------------------------------------------------------------------------
+
+核心思想：
+  当从 curX 到 nextX 跨越断点 p 时，聚焦于斜率（增长趋势）而非函数值：
+
+  gain = (nextM / pM2) × (pM1 / curM)
+       = (nextM / curM) × (pM1 / pM2)
+
+  其中：
+  - pM1 = 断点前区间在 p 处的 multiplier 值
+  - pM2 = 断点后区间在 p 处的 multiplier 值
+  - pM1/pM2 = 延拓修正因子
+
+几何解释：
+  将断点两侧的函数沿断点"缝合"，使得跨越断点时的增长率计算
+  基于"如果函数连续"的假设，而非原始跳变的函数值。
+
+
+11.3 实现代码
+------------------------------------------------------------------------------
+
+文件：utils.js
+
+(1) getBreakpoints(statKey)
+    功能：获取某属性的所有断点（区间边界）
+    返回：[{limit, prevInterval, nextInterval}, ...]
+
+(2) checkBreakpointCrossing(statKey, curX, nextX)
+    功能：检查从 curX 到 nextX 是否跨越断点
+    返回：{limit, pM1, pM2} 或 null
+    判定条件：curX <= limit < nextX
+
+(3) getGainWithExtension(statKey, curX, nextX)
+    功能：计算考虑延拓的相对增益
+    逻辑：
+      if 跨越断点:
+        gain = (nextM / curM) × (pM1 / pM2)
+      else:
+        gain = nextM / curM
+
+文件：solver.js - solveOptimalDistribution()
+
+修改前：
+  const curM = Utils.getMultiplier(k, curR);
+  const nextM = Utils.getMultiplier(k, curR + step);
+  const gain = nextM / curM;
+
+修改后：
+  const gain = Utils.getGainWithExtension(k, curR, curR + step);
+
+
+11.4 数学原理
+------------------------------------------------------------------------------
+
+延拓修正的数学本质：
+
+设分段函数：
+  f(x) = f₁(x)  (x ≤ p)
+  f(x) = f₂(x)  (x > p)
+
+在断点 p 处，f₁(p) ≠ f₂(p)（不连续）
+
+定义延拓函数 f_ext：
+  f_ext(x) = f₁(x)                    (x ≤ p)
+  f_ext(x) = f₂(x) × (f₁(p)/f₂(p))   (x > p)
+
+则 f_ext 在 p 处连续：f_ext(p⁻) = f_ext(p⁺) = f₁(p)
+
+跨越断点的增益：
+  gain = f_ext(nextX) / f_ext(curX)
+       = [f₂(nextX) × (f₁(p)/f₂(p))] / f₁(curX)
+       = (f₂(nextX) / f₁(curX)) × (f₁(p) / f₂(p))
+       = (nextM / curM) × (pM1 / pM2)
+
+
+11.5 优势
+------------------------------------------------------------------------------
+
+1. 本质修正：直接修正贪婪算法的 gain 计算，而非事后可视化修正
+2. 局部修正：仅当跨越断点时应用修正，不影响区间内部
+3. 数学一致：基于延拓函数的增长率计算，数学上自洽
+4. 无需累积：每次跨越独立计算修正因子，无累积误差
+5. 双向适用：无论断点处是向上跳变还是向下跳变，都能正确修正
+
+
+11.6 局限性
+------------------------------------------------------------------------------
+
+1. 仅修正函数值跳变，不修正导数跳变
+   - 断点处的斜率仍可能突变
+   - 但增益计算已基于"连续假设"，影响减小
+
+2. 多次跨越断点的情况
+   - 当前实现在单步内只处理一个断点
+   - 若步长过大可能跨越多个断点，需额外处理
+
+3. 依赖准确的断点检测
+   - 若 intervals 排序错误或 limit 重叠，可能导致修正错误
+
+
+11.7 smoothScores 修正（可视化用）
+------------------------------------------------------------------------------
+
+设计原则：
+  - calculateTotalScore 保持原始未修正值（保证总分准确性）
+  - smoothScores 用于 Delta 图可视化，需要修正断点跳变
+
+修正策略：
+  仅对跨越边界的那一个点应用修正，而非整体应用
+
+修正因子：
+  factor = pM1 / pM2
+  
+  其中：
+  - pM1 = 断点前区间在 limit 处的 multiplier 值
+  - pM2 = 断点后区间在 limit 处的 multiplier 值
+
+检测逻辑：
+  prevVal <= limit < currVal  →  跨越断点
+  
+  如果跨越断点：
+  smoothScore = rawScore × factor
+
+实现代码（solver.js - generateTrajectory）：
+  // 预计算断点修正因子
+  const breakpoints = {};
+  ["c", "h", "m", "v"].forEach((k) => {
+    breakpoints[k] = [];
+    const invs = state.stats[k].intervals || [];
+    const sorted = [...invs].sort((a, b) => a.limit - b.limit);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const prev = sorted[i];
+      const next = sorted[i + 1];
+      const limit = prev.limit;
+      const vLeft = Utils.evalPoly(limit, prev.a2, prev.a1, prev.a0);
+      const vRight = Utils.evalPoly(limit, next.a2, next.a1, next.a0);
+      if (vRight !== 0) {
+        breakpoints[k].push({ limit: limit, factor: vLeft / vRight });
+      }
+    }
+  });
+
+  // 对每个预算点，累积应用所有已跨越断点的修正因子
+  for (let b = minB; b <= maxB; b += step) {
+    const res = this.solveOptimalDistribution(b);
+    let smoothTotal = Utils.calculateTotalScore(res);
+
+    // 对每个属性，累积所有已跨越断点的修正因子
+    ["c", "h", "m", "v"].forEach((k) => {
+      const val = res[k];
+      breakpoints[k].forEach((bp) => {
+        // 只要当前值超过了断点，就应用修正因子（累积）
+        if (val > bp.limit) {
+          smoothTotal *= bp.factor;
+        }
+      });
+    });
+
+    d.smoothScores.push(smoothTotal);
+  }
+
+
+11.8 两种修正的对比
+------------------------------------------------------------------------------
+
+| 特性         | 延拓修正（算法用）      | smoothScores（可视化用） |
+|-------------|---------------------|----------------------|
+| 应用场景     | solveOptimalDistribution | generateTrajectory |
+| 修正对象     | gain 计算             | Delta 图可视化        |
+| 修正公式     | gain × (pM1/pM2)     | score × (pM1/pM2)   |
+| 修正时机     | 实时（每步分配）       | 事后（生成轨迹）      |
+| 修正范围     | 单步增益              | 所有已跨越断点的点（累积） |
+| 目的         | 避免断点误导分配       | 消除 Delta 图跳变     |
+
+
+11.9 smoothScores 修正逻辑演进
+------------------------------------------------------------------------------
+
+V1 错误版本（已修复）：
+  只在跨越断点的那一步应用修正因子
+
+  if (prevRes) {
+    if (prevVal <= bp.limit && bp.limit < currVal) {
+      smoothTotal *= bp.factor;  // 只修正当前点
+    }
+  }
+
+  问题：导致跨越点后的第一个 Delta 出现尖峰
+  原因：Delta[i+1] = score[i+1] - score[i]
+       如果 score[i] 被修正变小，Delta[i+1] 会变大
+
+V2 正确版本（当前）：
+  累积应用所有已跨越断点的修正因子
+
+  breakpoints[k].forEach((bp) => {
+    if (val > bp.limit) {  // 只要超过断点就应用
+      smoothTotal *= bp.factor;
+    }
+  });
+
+  效果：跨越断点后的所有点都应用相同的修正因子
+  Delta[i+1] = (score[i+1] × factor) - (score[i] × factor)
+            = factor × (score[i+1] - score[i])  ← 平滑！
+
+
+================================================================================
+                              文档结束
+================================================================================

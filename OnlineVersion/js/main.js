@@ -705,8 +705,8 @@ function openTrajectoryModal() {
   ChartManager.renderTrajectoryChart(labels, d);
   // @ts-ignore
   ChartManager.renderYieldTrajChart(labels, d.scores);
-  // @ts-ignore
-  ChartManager.renderDeltaTrajChart(labels, d.scores);
+  // 传递完整数据对象以便访问 smoothScores
+  ChartManager.renderDeltaTrajChart(labels, d);
 
   // 渲染策略阶段条
   // @ts-ignore

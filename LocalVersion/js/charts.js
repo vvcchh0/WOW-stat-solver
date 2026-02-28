@@ -258,18 +258,28 @@ const ChartManager = {
 
   /**
    * 渲染边际收益（Delta Score）随预算增长的变化图
-   * 
+   *
    * @param {Array<number>} labels - 横轴预算数据
-   * @param {Array<number>} scores - 总收益得分数据点
+   * @param {Object|Array<number>} scoresOrData - 如果是旧版调用则为 scores 数组，如果是新版则为包含 smoothScores 的对象
+   * 
+   * 注：延拓修正实现后，smoothScores 已弃用，scores 本身已足够平滑（因为最优分配已使用延拓修正）
    */
-  renderDeltaTrajChart(labels, scores) {
+  renderDeltaTrajChart(labels, scoresOrData) {
     const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("deltaTrajChart")).getContext("2d");
     // @ts-ignore
     if (this.instances.deltaTrajChart) this.instances.deltaTrajChart.destroy();
-    
+
+    // 兼容逻辑：优先使用 smoothScores (现已弃用，等于 scores)，否则使用原始 scores
+    // @ts-ignore
+    const srcScores = (scoresOrData.smoothScores) ? scoresOrData.smoothScores : scoresOrData;
+
     const dData = [];
-    for (let i = 1; i < scores.length; i++) {
-      dData.push(scores[i] - scores[i - 1]);
+    for (let i = 1; i < srcScores.length; i++) {
+      let val = srcScores[i] - srcScores[i - 1];
+      // 注：由于延拓修正已在算法层面修正断点跳变，Delta 数据理论上应平滑
+      // 但保留负值剔除作为保险（处理可能的数值误差）
+      if (val < 0) val = 0;
+      dData.push(val);
     }
     
     // @ts-ignore

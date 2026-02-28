@@ -46,24 +46,29 @@ const Solver = {
     });
 
     // 2. 迭代分配逻辑：采用不同步长进行贪婪搜索（从粗到细以提高性能）
-    const stepSizes = [100, 25, 5, 1];
+    // 优化：简化步长为 [100, 1]，并强制大步长提前退出，保留余量给小步长微调，避免“最后一步打包”导致的精度误差。
+    const stepSizes = [100, 1];
     if (available > 0 && unlocked.length > 0) {
-      stepSizes.forEach((step) => {
-        while (available >= step) {
+      stepSizes.forEach((step, index) => {
+        // 如果不是最小步长(1)，则保留至少 1 倍 step 的余量给后续微调 (即 available >= 2*step 时才分配)
+        // 这样确保了最后至少有 100~199 点预算是用 step=1 逐点分配的，保证收敛精度。
+        const isLastStep = index === stepSizes.length - 1;
+        const threshold = isLastStep ? step : step * 2;
+
+        while (available >= threshold) {
           /** @type {string|null} */
           let bestStat = null;
           let maxGain = -1;
-          
+
           unlocked.forEach((k) => {
             // @ts-ignore
             const curR = results[k];
-            // 计算当前属性在增加 step 步长后的边际收益率 (nextMultiplier / currentMultiplier)
+            // 计算当前属性在增加 step 步长后的边际收益率
+            // 使用延拓增益计算：当跨越断点时，应用延拓修正因子缝合跳变
+            // gain = (nextM / pM2) × (pM1 / curM) = (nextM / curM) × (pM1 / pM2)
             // @ts-ignore
-            const curM = Utils.getMultiplier(k, curR) || 0.00001;
-            // @ts-ignore
-            const nextM = Utils.getMultiplier(k, curR + step);
-            const gain = nextM / curM;
-            
+            const gain = Utils.getGainWithExtension(k, curR, curR + step);
+
             if (gain > maxGain) {
               maxGain = gain;
               bestStat = k;
@@ -87,7 +92,10 @@ const Solver = {
         let maxGain = -1;
         unlocked.forEach((k) => {
           // @ts-ignore
-          const m = Utils.getMultiplier(k, results[k] + available) / (Utils.getMultiplier(k, results[k]) || 0.00001);
+          const curR = results[k];
+          // 使用延拓增益计算（余量分配也可能跨越断点）
+          // @ts-ignore
+          const m = Utils.getGainWithExtension(k, curR, curR + available);
           if (m > maxGain) {
             maxGain = m;
             bestStat = k;
@@ -116,8 +124,8 @@ const Solver = {
   /**
    * 生成不同预算下的成长轨迹数据
    * 用于绘制绿字分配随总预算增长的演变图表
-   * 
-   * @returns {{labels: number[], d: {c: number[], h: number[], m: number[], v: number[], scores: number[], pcts: {c: number[], h: number[], m: number[], v: number[]}}}}
+   *
+   * @returns {{labels: number[], d: {c: number[], h: number[], m: number[], v: number[], scores: number[], smoothScores: number[], pcts: {c: number[], h: number[], m: number[], v: number[]}}}}
    */
   generateTrajectory() {
     const minB = 5000,
@@ -130,14 +138,45 @@ const Solver = {
         m: /** @type {number[]} */ ([]),
         v: /** @type {number[]} */ ([]),
         scores: /** @type {number[]} */ ([]),
-        pcts: { 
-            c: /** @type {number[]} */ ([]), 
-            h: /** @type {number[]} */ ([]), 
-            m: /** @type {number[]} */ ([]), 
-            v: /** @type {number[]} */ ([]) 
+        smoothScores: /** @type {number[]} */ ([]),
+        pcts: {
+            c: /** @type {number[]} */ ([]),
+            h: /** @type {number[]} */ ([]),
+            m: /** @type {number[]} */ ([]),
+            v: /** @type {number[]} */ ([])
         },
       };
-    
+
+    // 预计算断点修正因子 (用于 smoothScores 可视化修正)
+    // 注意：仅对跨越边界的那一个点应用修正，而非整体应用
+    const breakpoints = {};
+    ["c", "h", "m", "v"].forEach((k) => {
+      breakpoints[k] = [];
+      // @ts-ignore
+      const invs = state.stats[k].intervals || [];
+      // 确保按 limit 排序
+      const sorted = [...invs].sort((a, b) => a.limit - b.limit);
+
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const prev = sorted[i];
+        const next = sorted[i + 1];
+        const limit = prev.limit;
+
+        // 计算断点两侧的函数值
+        const vLeft = Utils.evalPoly(limit, prev.a2, prev.a1, prev.a0);
+        const vRight = Utils.evalPoly(limit, next.a2, next.a1, next.a0);
+
+        // 计算修正因子 (pM1/pM2)
+        // 用于修正跨越边界点的 smoothScore
+        if (vRight !== 0) {
+          breakpoints[k].push({ limit: limit, factor: vLeft / vRight });
+        }
+      }
+    });
+
+    // 记录上一步的分配结果，用于检测跨越
+    let prevRes = null;
+
     for (let b = minB; b <= maxB; b += step) {
       const res = this.solveOptimalDistribution(b);
       labels.push(b);
@@ -153,8 +192,30 @@ const Solver = {
       d.pcts.m.push(Utils.getPanelPercent("m", res.m));
       // @ts-ignore
       d.pcts.v.push(Utils.getPanelPercent("v", res.v));
+
+      // 1. 计算原始总分 (保留真实跳变)
+      // 注：calculateTotalScore 使用原始未修正的倍率，保证总分准确性
       // @ts-ignore
       d.scores.push(Utils.calculateTotalScore(res));
+
+      // 2. 计算平滑总分 (用于 Delta 图可视化)
+      // 策略：累积应用所有已跨越断点的修正因子
+      let smoothTotal = Utils.calculateTotalScore(res);
+
+      // 对每个属性，累积所有已跨越断点的修正因子
+      ["c", "h", "m", "v"].forEach((k) => {
+        const val = res[k];
+        // @ts-ignore
+        breakpoints[k].forEach((bp) => {
+          // 只要当前值超过了断点，就应用修正因子（累积）
+          if (val > bp.limit) {
+            smoothTotal *= bp.factor;
+          }
+        });
+      });
+
+      d.smoothScores.push(smoothTotal);
+      prevRes = res;
     }
     return { labels, d };
   },

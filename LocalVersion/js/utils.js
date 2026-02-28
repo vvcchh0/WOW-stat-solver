@@ -63,8 +63,7 @@ const Utils = {
    * 40-50%: 0.8
    * 50-60%: 0.7
    * 60-80%: 0.6
-   * 80-200%: 0.5
-   * >200%: 0.0
+   * >80%: 0.5
    * @param {string} statKey
    * @returns {{limit: number, eff: number}[]}
    */
@@ -88,8 +87,7 @@ const Utils = {
       { limit: 50 * scale, eff: 0.8 },
       { limit: 60 * scale, eff: 0.7 },
       { limit: 80 * scale, eff: 0.6 },
-      { limit: 200 * scale, eff: 0.5 },
-      { limit: Infinity, eff: 0.0 }
+      { limit: Infinity, eff: 0.5 }
     ];
   },
 
@@ -213,5 +211,92 @@ const Utils = {
    */
   formatNumber(num) {
     return Math.round(num).toLocaleString();
+  },
+
+  /**
+   * [断点查询] 获取某属性的所有断点（区间边界）
+   * @param {string} statKey
+   * @returns {{limit: number, prevInterval: Interval|null, nextInterval: Interval|null}[]}
+   */
+  getBreakpoints(statKey) {
+    // @ts-ignore
+    const intervals = state.stats[statKey].intervals;
+    if (!intervals || intervals.length < 2) return [];
+
+    const sorted = [...intervals].sort((a, b) => a.limit - b.limit);
+    const breakpoints = [];
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+      breakpoints.push({
+        limit: sorted[i].limit,
+        prevInterval: sorted[i],      // 断点前的区间
+        nextInterval: sorted[i + 1]   // 断点后的区间
+      });
+    }
+
+    return breakpoints;
+  },
+
+  /**
+   * [断点检查] 检查从 curX 到 nextX 是否跨越断点，并返回跨越的断点信息
+   * @param {string} statKey
+   * @param {number} curX
+   * @param {number} nextX
+   * @returns {{limit: number, pM1: number, pM2: number} | null}
+   *          pM1 = 断点前区间在 limit 处的 multiplier
+   *          pM2 = 断点后区间在 limit 处的 multiplier
+   */
+  checkBreakpointCrossing(statKey, curX, nextX) {
+    if (curX >= nextX) return null;  // 只检查递增方向
+
+    const breakpoints = this.getBreakpoints(statKey);
+    
+    for (const bp of breakpoints) {
+      // 检查是否跨越此断点：curX <= limit < nextX
+      if (curX <= bp.limit && bp.limit < nextX) {
+        const pM1 = this.evalPoly(bp.limit, bp.prevInterval.a2, bp.prevInterval.a1, bp.prevInterval.a0);
+        const pM2 = this.evalPoly(bp.limit, bp.nextInterval.a2, bp.nextInterval.a1, bp.nextInterval.a0);
+        return {
+          limit: bp.limit,
+          pM1: pM1,
+          pM2: pM2
+        };
+      }
+    }
+
+    return null;
+  },
+
+  /**
+   * [延拓增益计算] 计算考虑断点延拓的相对增益
+   * 当从 curX 到 nextX 跨越断点 p 时：
+   *   gain = (nextM / pM2) × (pM1 / curM)
+   *        = (nextM / curM) × (pM1 / pM2)
+   * 其中 pM1/pM2 是延拓修正因子，用于"缝合"断点处的跳变
+   *
+   * @param {string} statKey
+   * @param {number} curX - 当前值
+   * @param {number} nextX - 下一步值
+   * @returns {number} 延拓后的相对增益
+   */
+  getGainWithExtension(statKey, curX, nextX) {
+    const curM = this.getMultiplier(statKey, curX);
+    const nextM = this.getMultiplier(statKey, nextX);
+
+    if (curM === 0) return nextM > 0 ? Infinity : 1;
+
+    // 检查是否跨越断点
+    const crossing = this.checkBreakpointCrossing(statKey, curX, nextX);
+    
+    if (crossing && crossing.pM2 !== 0) {
+      // 跨越断点：应用延拓修正
+      // gain = (nextM / pM2) × (pM1 / curM)
+      const rawGain = nextM / curM;
+      const extensionFactor = crossing.pM1 / crossing.pM2;
+      return rawGain * extensionFactor;
+    }
+
+    // 未跨越断点：使用原始增益
+    return nextM / curM;
   },
 };

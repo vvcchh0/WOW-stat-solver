@@ -1,4 +1,40 @@
-# Changelog - LocalVersion (Localized Edition)
+# Changelog - OnlineVersion (CDN Edition)
+
+## [v1.5.0] - 2026-02-28
+### Added
+- **Extension Correction (算法层断点修正)**: Implemented a fundamental fix for breakpoint jumps in the greedy algorithm.
+  - Added three new utility functions in `utils.js`:
+    - `getBreakpoints(statKey)` - Retrieves all breakpoint limits for a stat
+    - `checkBreakpointCrossing(statKey, curX, nextX)` - Detects if a step crosses a breakpoint
+    - `getGainWithExtension(statKey, curX, nextX)` - Calculates gain with breakpoint extension correction
+  - Modified `solveOptimalDistribution` to use extension-corrected gain calculation
+  - **Formula**: `gain = (nextM / curM) × (pM1 / pM2)` where pM1/pM2 is the extension factor
+
+### Changed
+- **smoothScores Cumulative Correction**: Fixed the smoothing logic in `generateTrajectory`.
+  - **Previous (Buggy)**: Applied correction factor only at the crossing step, causing a spike in the next Delta value
+  - **New (Correct)**: Cumulatively applies correction factors for ALL already-crossed breakpoints
+  - **Mathematical Principle**: Uses the homogeneity property of finite differences: Δ(k·f) = k·Δ(f)
+  - **Result**: Delta chart is now mathematically smooth after breakpoint crossings
+
+### Fixed
+- **Delta Chart Spike**: Resolved the artificial spike issue in the Marginal Gain (Delta) chart at breakpoint crossings (e.g., the spike at budget ~25500 for the template.txt case)
+
+### Documentation
+- **ProjectLogic.txt**: Added comprehensive analysis of the extension correction and smoothScores evolution (Chapter 11 & 11.9)
+- **ProjectStatus_byQwen.md**: Created new project status document with mathematical principles and development log
+
+## [v1.4.1] - 2026-01-28
+### Improved
+- **Algorithm Convergence**: Optimized the greedy algorithm's stepping logic.
+  - Simplified step sizes to `[100, 1]` for better efficiency.
+  - Implemented a "Budget Reservation" mechanism for non-final steps (requiring `available >= step * 2`), forcing the algorithm to pass sufficient budget to the finest granularity (step=1) to prevent "whole number" overshoot errors.
+- **Marginal Gain Chart**: Fixed artificial spikes in the "Delta" chart caused by SimC fitting breakpoints.
+  - Implemented a "Parallel Smoothing" technique: While the main Yield Chart retains the authentic (jumping) simulation data, the Delta Chart now uses a mathematically corrected "Smooth Score" curve.
+  - This correction uses "Ratio Alignment" at breakpoints to create a continuous derivative, ensuring the marginal gain curve accurately reflects diminishing returns without fitting artifacts.
+
+### Fixed
+- **Chart Logic**: Fixed a reference error (`traj is not defined`) in `openTrajectoryModal` when rendering charts.
 
 ## [v1.4.0] - 2026-01-25
 ### Added
