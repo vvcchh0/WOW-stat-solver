@@ -718,10 +718,9 @@ function openTrajectoryModal() {
     legendContainer.innerHTML = "";
     listContainer.innerHTML = "";
     if (axisContainer) axisContainer.innerHTML = "";
-
-    // MID Update: Sync with solver.js generateTrajectory range
-    const minB = 1000;
-    const maxB = 20000;
+    
+    const minB = 5000;
+    const maxB = 60000;
     const totalRange = maxB - minB;
     const uniquePhases = new Set();
 

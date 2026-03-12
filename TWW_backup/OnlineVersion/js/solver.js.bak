@@ -46,12 +46,12 @@ const Solver = {
     });
 
     // 2. 迭代分配逻辑：采用不同步长进行贪婪搜索（从粗到细以提高性能）
-    // MID Update: 简化步长为 [20, 1]，并强制大步长提前退出，保留余量给小步长微调，避免“最后一步打包”导致的精度误差。
-    const stepSizes = [20, 1];
+    // 优化：简化步长为 [100, 1]，并强制大步长提前退出，保留余量给小步长微调，避免“最后一步打包”导致的精度误差。
+    const stepSizes = [100, 1];
     if (available > 0 && unlocked.length > 0) {
       stepSizes.forEach((step, index) => {
         // 如果不是最小步长(1)，则保留至少 1 倍 step 的余量给后续微调 (即 available >= 2*step 时才分配)
-        // 这样确保了最后至少有 20~19 点预算是用 step=1 逐点分配的，保证收敛精度。
+        // 这样确保了最后至少有 100~199 点预算是用 step=1 逐点分配的，保证收敛精度。
         const isLastStep = index === stepSizes.length - 1;
         const threshold = isLastStep ? step : step * 2;
 
@@ -128,9 +128,9 @@ const Solver = {
    * @returns {{labels: number[], d: {c: number[], h: number[], m: number[], v: number[], scores: number[], smoothScores: number[], pcts: {c: number[], h: number[], m: number[], v: number[]}}}}
    */
   generateTrajectory() {
-    const minB = 1000,
-      maxB = 20000,
-      step = 200,
+    const minB = 5000,
+      maxB = 60000,
+      step = 500,
       labels = [],
       d = {
         c: /** @type {number[]} */ ([]),

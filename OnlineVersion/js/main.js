@@ -699,14 +699,11 @@ function applySimData() {
 function openTrajectoryModal() {
   // @ts-ignore
   const { labels, d } = Solver.generateTrajectory();
-  // @ts-ignore
-  ChartManager.renderPercentTrajChart(labels, d.pcts);
-  // @ts-ignore
-  ChartManager.renderTrajectoryChart(labels, d);
-  // @ts-ignore
-  ChartManager.renderYieldTrajChart(labels, d.scores);
-  // 传递完整数据对象以便访问 smoothScores
-  ChartManager.renderDeltaTrajChart(labels, d);
+    ChartManager.renderTrajectoryChart(labels, d);
+    ChartManager.renderPercentTrajChart(labels, d.pcts);
+    ChartManager.renderYieldTrajChart(labels, d.scores);
+    // 传递完整数据对象以便访问 smoothScores
+    ChartManager.renderDeltaTrajChart(labels, d);
 
   // 渲染策略阶段条
   // @ts-ignore
@@ -721,9 +718,10 @@ function openTrajectoryModal() {
     legendContainer.innerHTML = "";
     listContainer.innerHTML = "";
     if (axisContainer) axisContainer.innerHTML = "";
-    
-    const minB = 5000;
-    const maxB = 60000;
+
+    // MID Update: Sync with solver.js generateTrajectory range
+    const minB = 1000;
+    const maxB = 20000;
     const totalRange = maxB - minB;
     const uniquePhases = new Set();
 

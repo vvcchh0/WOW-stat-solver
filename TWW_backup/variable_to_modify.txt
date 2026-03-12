@@ -1,0 +1,223 @@
+================================================================================
+                    WOW Stat Solver - 算法数据清单
+                    (Variables to Modify for TWW Update)
+================================================================================
+文档说明：本文件列出所有需要修改的算法配置数据，用于更新到 TWW 新版本。
+================================================================================
+
+================================================================================
+一、四绿字基础配置 (STAT_CONFIG in config.js)
+================================================================================
+位置：config.js - STAT_CONFIG 对象
+用途：定义四个属性的基础元数据
+
+【爆击 Critical Strike】
+STAT_CONFIG.c.def_conv = 700          // 转化率：700 Rating = 1%
+STAT_CONFIG.c.def_base = 5.0          // 基础百分比：5.0%
+STAT_CONFIG.c.base_limit = 21000      // DR 第一阈值：30% × 700 = 21000
+STAT_CONFIG.c.step_limit = 7000       // DR 步长：10% × 700 = 7000
+
+【急速 Haste】
+STAT_CONFIG.h.def_conv = 660          // 转化率：660 Rating = 1%
+STAT_CONFIG.h.def_base = 0.0          // 基础百分比：0.0%
+STAT_CONFIG.h.base_limit = 19600      // DR 第一阈值：30% × 660 = 19600
+STAT_CONFIG.h.step_limit = 6600       // DR 步长：10% × 660 = 6600
+
+【精通 Mastery】
+STAT_CONFIG.m.def_conv = 700          // 转化率：700 Rating = 1%
+STAT_CONFIG.m.def_base = 0.0          // 基础百分比：0.0%
+STAT_CONFIG.m.base_limit = 21000      // DR 第一阈值：30% × 700 = 21000
+STAT_CONFIG.m.step_limit = 7000       // DR 步长：10% × 700 = 7000
+
+【全能 Versatility】
+STAT_CONFIG.v.def_conv = 780          // 转化率：780 Rating = 1%
+STAT_CONFIG.v.def_base = 0.0          // 基础百分比：0.0%
+STAT_CONFIG.v.base_limit = 23400      // DR 第一阈值：30% × 780 = 23400
+STAT_CONFIG.v.step_limit = 6600       // DR 步长：10% × 780 = 6600
+
+================================================================================
+二、收益递减 DR 效率表 (utils.js - getDRTiers)
+================================================================================
+位置：utils.js - getDRTiers() 函数
+用途：定义 DR 各阶段的效率百分比
+
+DR_TIERS = [
+  { limit: 30,  eff: 1.0 },   // 0-30%:   100% 效率
+  { limit: 40,  eff: 0.9 },   // 30-40%:   90% 效率
+  { limit: 50,  eff: 0.8 },   // 40-50%:   80% 效率
+  { limit: 60,  eff: 0.7 },   // 50-60%:   70% 效率
+  { limit: 80,  eff: 0.6 },   // 60-80%:   60% 效率
+  { limit: Inf, eff: 0.5 }    // 80-200%:  50% 效率
+]
+
+注意：精通的阈值会按 scale = critConv/masteryConv 缩放
+
+================================================================================
+三、贪婪算法步长配置 (solver.js - solveOptimalDistribution)
+================================================================================
+位置：solver.js - solveOptimalDistribution() 函数
+用途：定义贪婪搜索的步长序列
+
+GREEDY_STEP_SIZES = [100, 1]        // 从粗到细的步长序列
+GREEDY_THRESHOLD_MULTIPLIER = 2     // 非最后一步保留余量倍数 (available >= step × 2)
+
+================================================================================
+四、UI 预算控制条配置 (index.html)
+================================================================================
+位置：index.html - budgetSlider input 元素
+用途：定义预算滑块的取值范围
+
+BUDGET_MIN = 5000                   // 最小预算值
+BUDGET_MAX = 60000                  // 最大预算值
+BUDGET_STEP = 1                     // 滑动步长
+BUDGET_DEFAULT = 28000              // 默认预算值
+
+================================================================================
+五、成长轨迹模拟配置 (solver.js - generateTrajectory)
+================================================================================
+位置：solver.js - generateTrajectory() 函数
+用途：定义成长轨迹的采样范围
+
+TRAJECTORY_MIN = 5000               // 起始预算
+TRAJECTORY_MAX = 60000              // 结束预算
+TRAJECTORY_STEP = 500               // 采样步长 (每 500 点采样一次)
+TRAJECTORY_POINTS = 111             // 数据点数 = (60000-5000)/500 + 1
+
+================================================================================
+六、默认多项式系数 (config.js - POLY_DEFAULT)
+================================================================================
+位置：config.js - POLY_DEFAULT 常量
+用途：无 SimC 数据时的兜底模型
+
+POLY_DEFAULT.a2 = 0                 // 二次项系数
+POLY_DEFAULT.a1 = 0.00001           // 一次项系数
+POLY_DEFAULT.a0 = 1.0               // 常数项
+
+模型公式：y = 0.00001x + 1.0
+
+================================================================================
+七、SimC 拟合配置 (solver.js - processSimData)
+================================================================================
+位置：solver.js - processSimData() 函数
+用途：定义 SimC 数据拟合的参数
+
+FIT_MODE_AUTO = 'auto'              // 智能选择：R²≥0.99 用线性，否则二阶
+FIT_MODE_LINEAR = 'linear'          // 强制线性拟合
+FIT_R2_THRESHOLD = 0.99             // 线性拟合 R²阈值
+FIT_MIN_POINTS = 4                  // 每段最少数据点要求
+
+分段点计算：
+  cap1 = base_limit
+  cap2 = base_limit + step_limit
+  cap3 = base_limit + 2 × step_limit
+
+================================================================================
+八、策略阶段识别阈值 (solver.js - analyzeTrajectoryPhases)
+================================================================================
+位置：solver.js - analyzeTrajectoryPhases() 函数
+用途：定义分配策略类型的判定条件
+
+PHASE_SINGLE_THRESHOLD = 0.70       // 单一主修：最大增量占比 ≥ 70%
+PHASE_HYBRID_THRESHOLD = 0.85       // 双修：前两属性增量合计 ≥ 85%
+PHASE_MIXED = 其他情况               // 混合策略
+
+================================================================================
+九、状态初始值 (config.js - state)
+================================================================================
+位置：config.js - state 对象
+用途：定义应用启动时的默认状态
+
+state.lang = "zh"                   // 默认语言
+state.budget = 28000                // 默认预算
+state.displayMode = "gain"          // 显示模式：'gain' | 'total'
+state.customValues = {              // 自定义对比默认值
+  c: 6000,
+  h: 6000,
+  m: 6000,
+  v: 6000
+}
+
+state.stats.c.basePct = 5           // 爆击基础百分比
+state.stats.c.statBase = 0          // 爆击模拟起点
+state.stats.c.conv = 700            // 爆击转化率
+
+state.stats.h.basePct = 0           // 急速基础百分比
+state.stats.h.statBase = 0          // 急速模拟起点
+state.stats.h.conv = 660            // 急速转化率
+
+state.stats.m.basePct = 0           // 精通基础百分比
+state.stats.m.statBase = 0          // 精通模拟起点
+state.stats.m.conv = 700            // 精通转化率
+
+state.stats.v.basePct = 0           // 全能基础百分比
+state.stats.v.statBase = 0          // 全能模拟起点
+state.stats.v.conv = 780            // 全能转化率
+
+================================================================================
+十、延拓修正配置 (utils.js)
+================================================================================
+位置：utils.js - getGainWithExtension() 函数
+用途：断点跳变修正
+
+EXTENSION_FORMULA = (nextM/curM) × (pM1/pM2)
+  - pM1: 断点前区间在 limit 处的 multiplier
+  - pM2: 断点后区间在 limit 处的 multiplier
+
+================================================================================
+十一、smoothScores 累积修正 (solver.js - generateTrajectory)
+================================================================================
+位置：solver.js - generateTrajectory() 函数
+用途：Delta 图可视化平滑
+
+SMOOTH_FORMULA = score × Π(pM1/pM2)  // 累积所有已跨越断点的修正因子
+应用条件：val > bp.limit  // 只要当前值超过断点就应用
+
+================================================================================
+十二、文件修改清单 (更新 TWW 时需要修改的文件)
+================================================================================
+
+【LocalVersion】
+  LocalVersion/js/config.js
+    - STAT_CONFIG (四绿字基础配置)
+    - state (状态初始值)
+    - POLY_DEFAULT (默认多项式)
+  
+  LocalVersion/js/utils.js
+    - getDRTiers() (DR 效率表)
+    - getGainWithExtension() (延拓修正)
+  
+  LocalVersion/js/solver.js
+    - solveOptimalDistribution() (贪婪步长)
+    - generateTrajectory() (轨迹配置、smoothScores)
+    - processSimData() (SimC 拟合配置)
+    - analyzeTrajectoryPhases() (策略识别阈值)
+  
+  LocalVersion/index.html
+    - budgetSlider (min/max/step/value)
+
+【OnlineVersion】
+  OnlineVersion/js/config.js        (同 LocalVersion)
+  OnlineVersion/js/utils.js         (同 LocalVersion)
+  OnlineVersion/js/solver.js        (同 LocalVersion)
+  OnlineVersion/index.html          (同 LocalVersion)
+
+================================================================================
+十三、更新检查清单 (TWW Update Checklist)
+================================================================================
+
+□ 1. 确认 TWW 四绿字转化率 (def_conv)
+□ 2. 确认 TWW DR 阈值是否变化 (base_limit, step_limit)
+□ 3. 确认 TWW 基础百分比是否变化 (def_base)
+□ 4. 更新 config.js 中的 STAT_CONFIG
+□ 5. 更新 config.js 中的 state 初始值
+□ 6. 确认 DR 效率表是否需要调整 (getDRTiers)
+□ 7. 同步 LocalVersion 和 OnlineVersion
+□ 8. 更新 changelog.md
+□ 9. 测试预算滑块范围是否合适
+□ 10. 测试成长轨迹范围是否合适
+□ 11. 导入新版 SimC 数据验证拟合
+□ 12. 更新 ProjectStatus_byQwen.md
+
+================================================================================
+                              文档结束
+================================================================================

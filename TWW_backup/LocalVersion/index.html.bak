@@ -18,30 +18,24 @@
       })();
     </script>
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (Local) -->
+    <script src="js/vendor/tailwindcss.js"></script>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js (Local) -->
+    <script src="js/vendor/chart.js"></script>
 
-    <!-- KaTeX -->
+    <!-- KaTeX (Local) -->
     <link
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+      href="css/vendor/katex.min.css"
     />
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="js/vendor/katex.min.js"></script>
 
-    <!-- Font Awesome -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+    <!-- Fonts (Local) -->
+    <link rel="stylesheet" href="css/vendor/google-fonts.css" />
 
-    <!-- Fonts -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;600;800;900&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Font Awesome (Local) -->
+    <link rel="stylesheet" href="css/vendor/fontawesome/css/all.min.css" />
 
     <style>
       :root {
@@ -354,17 +348,17 @@
                 <span
                   class="text-lg font-mono text-white font-bold"
                   id="budgetDisplay"
-                  >4,000</span
+                  >28,000</span
                 >
               </div>
             </div>
             <input
               type="range"
               id="budgetSlider"
-              min="1000"
-              max="20000"
+              min="5000"
+              max="60000"
               step="1"
-              value="4000"
+              value="28000"
               class="w-full accent-indigo-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer border border-slate-700"
             />
           </div>
@@ -372,7 +366,7 @@
             <input
               type="number"
               id="budgetInput"
-              value="4000"
+              value="28000"
               class="tiny-input w-full text-center text-base py-2 font-bold text-white border-slate-600 bg-slate-800 rounded focus:border-indigo-500"
             />
           </div>

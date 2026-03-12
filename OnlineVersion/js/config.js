@@ -183,7 +183,7 @@ const I18N = {
  */
 const POLY_DEFAULT = {
   a2: 0,
-  a1: 0.00001,
+  a1: 0.0001,
   a0: 1.0,
 };
 
@@ -209,10 +209,10 @@ const STAT_CONFIG = {
     color: "#ef4444",
     class: "stat-header-c",
     icon: "fa-fire",
-    def_conv: 700,
+    def_conv: 45.99,
     def_base: 5.0,
-    base_limit: 21000, // 30% * 700
-    step_limit: 7000, // 10% * 700
+    base_limit: 1380, // 30% * 45.99
+    step_limit: 460, // 10% * 45.99
     letter: "C",
     var: "c",
   },
@@ -223,10 +223,10 @@ const STAT_CONFIG = {
     color: "#22c55e",
     class: "stat-header-h",
     icon: "fa-bolt",
-    def_conv: 660,
+    def_conv: 44.01,
     def_base: 0.0,
-    base_limit: 19600,
-    step_limit: 6600,
+    base_limit: 1320, // 30% * 44.01
+    step_limit: 440, // 10% * 44.01
     letter: "H",
     var: "h",
   },
@@ -237,10 +237,10 @@ const STAT_CONFIG = {
     color: "#a855f7",
     class: "stat-header-m",
     icon: "fa-crown",
-    def_conv: 700,
+    def_conv: 45.99,
     def_base: 0.0,
-    base_limit: 21000,
-    step_limit: 7000,
+    base_limit: 1380, // 30% * 45.99
+    step_limit: 460, // 10% * 45.99
     letter: "M",
     var: "m",
   },
@@ -251,10 +251,10 @@ const STAT_CONFIG = {
     color: "#3b82f6",
     class: "stat-header-v",
     icon: "fa-shield-halved",
-    def_conv: 780,
+    def_conv: 53.97,
     def_base: 0.0,
-    base_limit: 23400,
-    step_limit: 6600,
+    base_limit: 1619, // 30% * 53.97
+    step_limit: 540, // 10% * 53.97
     letter: "V",
     var: "v",
   },
@@ -271,9 +271,9 @@ const STAT_CONFIG = {
  */
 let state = {
   lang: "zh",
-  budget: 28000,
+  budget: 4000,
   displayMode: "gain",
-  customValues: { c: 6000, h: 6000, m: 6000, v: 6000 },
+  customValues: { c: 1000, h: 1000, m: 1000, v: 1000 },
   stats: {
     c: {
       id: "c",
@@ -281,7 +281,7 @@ let state = {
       lockVal: 0,
       basePct: 5,
       statBase: 0,
-      conv: 700,
+      conv: 45.99,
       intervals: [],
     },
     h: {
@@ -290,7 +290,7 @@ let state = {
       lockVal: 0,
       basePct: 0,
       statBase: 0,
-      conv: 660,
+      conv: 44.01,
       intervals: [],
     },
     m: {
@@ -299,7 +299,7 @@ let state = {
       lockVal: 0,
       basePct: 0,
       statBase: 0,
-      conv: 700,
+      conv: 45.99,
       intervals: [],
     },
     v: {
@@ -308,7 +308,7 @@ let state = {
       lockVal: 0,
       basePct: 0,
       statBase: 0,
-      conv: 780,
+      conv: 53.97,
       intervals: [],
     },
   },
