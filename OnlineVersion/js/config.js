@@ -116,6 +116,26 @@ const I18N = {
     chart_yield_traj: "总收益增长曲线",
     chart_delta_traj: "边际收益变化 (Delta)",
     chart_strategy_phases: "策略阶段分布",
+    // Config Note
+    config_note_label: "注释：",
+    config_note_placeholder: "在此输入配置导入相关的注释内容 (支持 Markdown)...",
+    add_interval_label: "添加区间",
+    // Export
+    export_report_title: "绿字成长模拟报告",
+    export_report_subtitle: "WoW Stat Solver - Growth Trajectory Report",
+    export_timestamp: "生成时间:",
+    export_config_note: "配置注释:",
+    export_budget_range: "预算范围:",
+    export_stats_config: "属性配置:",
+    export_base_pct: "基础 %",
+    export_base_conv: "基础转化比 /1%",
+    export_intervals: "区间:",
+    export_chart_pct: "绿字成长路线 (%)",
+    export_chart_rating: "绿字分配路线 (Rating)",
+    export_chart_yield: "总收益增长曲线",
+    export_chart_delta: "边际收益变化",
+    export_phases: "策略阶段分析",
+    export_report_btn: "导出报告",
   },
   en: {
     app_title: "WoW Stat Solver",
@@ -169,6 +189,26 @@ const I18N = {
     chart_yield_traj: "Total Yield Growth",
     chart_delta_traj: "Marginal Gain (Delta)",
     chart_strategy_phases: "Strategy Phases",
+    // Config Note
+    config_note_label: "Comment:",
+    config_note_placeholder: "Enter comments about this configuration (Markdown supported)...",
+    add_interval_label: "ADD TIER",
+    // Export
+    export_report_title: "Growth Trajectory Report",
+    export_report_subtitle: "WoW Stat Solver - Growth Trajectory Report",
+    export_timestamp: "Generated:",
+    export_config_note: "Configuration Note:",
+    export_budget_range: "Budget Range:",
+    export_stats_config: "Stats Configuration:",
+    export_base_pct: "Base %",
+    export_base_conv: "Base Conv /1%",
+    export_intervals: "Intervals:",
+    export_chart_pct: "Stat Growth Trajectory (%)",
+    export_chart_rating: "Rating Allocation Trajectory",
+    export_chart_yield: "Total Yield Growth",
+    export_chart_delta: "Marginal Gain (Delta)",
+    export_phases: "Strategy Phases Analysis",
+    export_report_btn: "Export Report",
   },
 };
 
@@ -209,10 +249,10 @@ const STAT_CONFIG = {
     color: "#ef4444",
     class: "stat-header-c",
     icon: "fa-fire",
-    def_conv: 45.99,
+    def_conv: 46,
     def_base: 5.0,
-    base_limit: 1380, // 30% * 45.99
-    step_limit: 460, // 10% * 45.99
+    base_limit: 1380, // 30% * 46
+    step_limit: 460, // 10% * 46
     letter: "C",
     var: "c",
   },
@@ -223,10 +263,10 @@ const STAT_CONFIG = {
     color: "#22c55e",
     class: "stat-header-h",
     icon: "fa-bolt",
-    def_conv: 44.01,
+    def_conv: 44,
     def_base: 0.0,
-    base_limit: 1320, // 30% * 44.01
-    step_limit: 440, // 10% * 44.01
+    base_limit: 1320, // 30% * 44
+    step_limit: 440, // 10% * 44
     letter: "H",
     var: "h",
   },
@@ -237,10 +277,10 @@ const STAT_CONFIG = {
     color: "#a855f7",
     class: "stat-header-m",
     icon: "fa-crown",
-    def_conv: 45.99,
+    def_conv: 46,
     def_base: 0.0,
-    base_limit: 1380, // 30% * 45.99
-    step_limit: 460, // 10% * 45.99
+    base_limit: 1380, // 30% * 46
+    step_limit: 460, // 10% * 46
     letter: "M",
     var: "m",
   },
@@ -251,10 +291,10 @@ const STAT_CONFIG = {
     color: "#3b82f6",
     class: "stat-header-v",
     icon: "fa-shield-halved",
-    def_conv: 53.97,
+    def_conv: 54,
     def_base: 0.0,
-    base_limit: 1619, // 30% * 53.97
-    step_limit: 540, // 10% * 53.97
+    base_limit: 1620, // 30% * 54
+    step_limit: 540, // 10% * 54
     letter: "V",
     var: "v",
   },
@@ -266,7 +306,7 @@ const STAT_CONFIG = {
 /**
  * 核心状态对象 (Reactive Source)
  * 存储应用运行时的所有动态数据。修改此对象后需调用 updateUI() 刷新界面。
- * 
+ *
  * @type {State}
  */
 let state = {
@@ -281,7 +321,7 @@ let state = {
       lockVal: 0,
       basePct: 5,
       statBase: 0,
-      conv: 45.99,
+      conv: 46,  // Updated to match STAT_CONFIG.c.def_conv
       intervals: [],
     },
     h: {
@@ -290,7 +330,7 @@ let state = {
       lockVal: 0,
       basePct: 0,
       statBase: 0,
-      conv: 44.01,
+      conv: 44,  // Updated to match STAT_CONFIG.h.def_conv
       intervals: [],
     },
     m: {
@@ -299,7 +339,7 @@ let state = {
       lockVal: 0,
       basePct: 0,
       statBase: 0,
-      conv: 45.99,
+      conv: 46,  // Updated to match STAT_CONFIG.m.def_conv
       intervals: [],
     },
     v: {
@@ -308,7 +348,7 @@ let state = {
       lockVal: 0,
       basePct: 0,
       statBase: 0,
-      conv: 53.97,
+      conv: 54,  // Updated to match STAT_CONFIG.v.def_conv
       intervals: [],
     },
   },

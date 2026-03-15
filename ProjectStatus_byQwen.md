@@ -1,8 +1,8 @@
 # Project Status & Development Log
 
-**Last Updated:** 2026-02-28  
-**Project:** WoW Stat Solver - 绿字最优分配求解器  
-**Current Version:** v1.5.0  
+**Last Updated:** 2026-03-12
+**Project:** WoW Stat Solver - 绿字最优分配求解器
+**Current Version:** v1.5.0-MID
 **Contributor:** Qwen Code
 
 ---
@@ -78,6 +78,30 @@ breakpoints[k].forEach((bp) => {
 ---
 
 ## 📝 开发日志
+
+### [2026-03-12] SimC 导入格式验证
+
+#### 问题背景
+用户经常用 Excel 打开并保存 SimC 导出的 CSV 文件，导致：
+1. **行尾空列**：Excel 用空列补齐每行
+2. **空格丢失**：原始格式 `", "` 变为 `","`，导致千位分隔符解析错误
+
+#### 解决方案
+**格式检测**：
+- `hasTrailingCommas`：检测行尾连续逗号
+- `hasNoSpacesAfterCommas`：检测逗号后是否缺少空格
+
+**用户提示**：弹出警告并提供建议
+- 使用原始 SimC 导出的 CSV 文件
+- 或选择 CSV UTF-8 格式并移除千位分隔符
+
+#### 文件修改
+| 文件 | 修改内容 |
+|-----|---------|
+| `solver.js` | 添加 Excel 格式检测逻辑 |
+| `changelog.md` | 更新 v1.5.0-MID 发布说明 |
+
+---
 
 ### [2026-02-28] 断点跳变本质修正
 

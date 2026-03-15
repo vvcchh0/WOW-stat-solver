@@ -49,12 +49,62 @@ function initApp() {
  * @param {boolean} [useDefaults=true] - 是否填充默认分段区间
  */
 function initStats(useDefaults = true) {
+  // Render damage formula (top line)
+  const damageEl = document.getElementById("footer-formula-damage");
+  if (damageEl) {
+    katex.render("D = D_0 \\times \\prod_{i} \\text{StatGain}_i", damageEl, {
+      throwOnError: false,
+      displayMode: true,
+    });
+  }
+
+  // Render gain formula (bottom line)
   const el = document.getElementById("footer-formula");
   if (el) {
     // @ts-ignore
-    katex.render("Gain = a_2 X^2 + a_1 X + a_0", el, {
+    katex.render("\\text{StatGain}_i \\approx a_2 x_i^2 + a_1 x_i + a_0", el, {
       throwOnError: false,
+      displayMode: true,
     });
+  }
+
+  // Initialize config import note as empty on first load only
+  const noteEl = document.getElementById("configImportNote");
+  const displayEl = document.getElementById("configNoteDisplay");
+  if (noteEl) {
+    // Only clear if not importing (i.e., no saved note in localStorage)
+    const savedNote = localStorage.getItem("configImportNote");
+    if (!savedNote) {
+      noteEl.value = "";
+      localStorage.removeItem("configImportNote");
+    } else {
+      // Restore saved note (from import)
+      noteEl.value = savedNote;
+    }
+
+    // Auto-resize textarea
+    const autoResize = () => {
+      noteEl.style.height = "auto";
+      const newHeight = Math.min(noteEl.scrollHeight, 180); // max ~5 lines
+      noteEl.style.height = newHeight + "px";
+    };
+
+    noteEl.addEventListener("input", () => {
+      localStorage.setItem("configImportNote", noteEl.value);
+      autoResize();
+      // Update preview if in display mode
+      if (displayEl && !displayEl.classList.contains("hidden")) {
+        displayEl.innerHTML = renderMarkdown(noteEl.value);
+      }
+    });
+
+    // Initial resize
+    setTimeout(autoResize, 0);
+    
+    // Update display if in preview mode and has saved note
+    if (displayEl && !displayEl.classList.contains("hidden") && savedNote) {
+      displayEl.innerHTML = renderMarkdown(savedNote);
+    }
   }
 
   /** @type {Array<"c"|"h"|"m"|"v">} */
@@ -67,6 +117,42 @@ function initStats(useDefaults = true) {
     }
   });
   updateLanguageUI();
+}
+
+/**
+ * Markdown renderer using marked.js
+ * @param {string} md
+ * @returns {string}
+ */
+function renderMarkdown(md) {
+  if (!md || !md.trim()) return "";
+  return marked.parse(md);
+}
+
+/**
+ * Toggle between edit and preview mode for config note
+ */
+function toggleNoteMode() {
+  const noteEl = document.getElementById("configImportNote");
+  const displayEl = document.getElementById("configNoteDisplay");
+  const btnEl = document.getElementById("btnToggleNoteMode");
+  
+  if (!noteEl || !displayEl || !btnEl) return;
+  
+  const isPreview = !displayEl.classList.contains("hidden");
+  
+  if (isPreview) {
+    // Switch to edit mode
+    displayEl.classList.add("hidden");
+    noteEl.classList.remove("hidden");
+    btnEl.innerHTML = '<i class="fa-solid fa-eye"></i>';
+  } else {
+    // Switch to preview mode
+    displayEl.innerHTML = renderMarkdown(noteEl.value);
+    noteEl.classList.add("hidden");
+    displayEl.classList.remove("hidden");
+    btnEl.innerHTML = '<i class="fa-solid fa-pen"></i>';
+  }
 }
 
 // --- 2. 核心 UI 更新与渲染逻辑 ---
@@ -391,9 +477,11 @@ function renderStatCard(key) {
   /** @type {HTMLElement} */ (tpl.querySelector(".add-interval-btn")).addEventListener("click", () => {
     // @ts-ignore
     const last = state.stats[key].intervals[state.stats[key].intervals.length - 1];
+    // @ts-ignore
+    const conf = STAT_CONFIG[key];
     addInterval(
       key,
-      last ? last.limit + 7000 : 21000,
+      last ? last.limit + conf.step_limit : conf.base_limit,
       // @ts-ignore
       POLY_DEFAULT.a2,
       // @ts-ignore
@@ -832,6 +920,74 @@ function closeTrajectoryModal() {
   /** @type {HTMLElement} */ (document.getElementById("trajectoryModal")).classList.add("hidden");
 }
 
+/**
+ * 导出成长模拟报告为独立 HTML 文件
+ */
+function exportTrajectoryReport() {
+  const t = I18N[state.lang];
+  const noteEl = document.getElementById("configImportNote");
+  const configNote = noteEl ? noteEl.value : "";
+
+  // 获取轨迹数据
+  const trajData = Solver.generateTrajectory();
+  const phases = Solver.analyzeTrajectoryPhases(trajData);
+  const { labels, d } = trajData;
+
+  // 生成配置信息
+  const statsConfig = {};
+  ["c", "h", "m", "v"].forEach((k) => {
+    // @ts-ignore
+    const stat = state.stats[k];
+    // @ts-ignore
+    const conf = STAT_CONFIG[k];
+    statsConfig[k] = {
+      // @ts-ignore
+      name: state.lang === "zh" ? conf.name_zh : conf.name_en,
+      base: conf.def_base,  // Use def_base from STAT_CONFIG
+      conv: conf.def_conv,
+      intervals: stat.intervals.map((inv) => ({
+        limit: inv.limit,
+        a2: inv.a2,
+        a1: inv.a1,
+        a0: inv.a0,
+      })),
+    };
+  });
+
+  // 生成 HTML 内容
+  const htmlContent = generateReportHTML({
+    title: t.export_report_title,
+    subtitle: t.export_report_subtitle,
+    timestamp: new Date().toLocaleString(state.lang === "zh" ? "zh-CN" : "en-US"),
+    configNote,
+    budgetRange: { min: 1000, max: 20000, step: 200 },
+    statsConfig,
+    trajData: { labels, d, phases, smoothScores: d.smoothScores },
+    t,
+  });
+
+  // 下载文件
+  const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const langSuffix = state.lang === "zh" ? "_zh" : "_en";
+  // Use local time to match config export format
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  const timestamp = `${yy}-${mm}-${dd}-${hh}-${min}-${ss}`;
+  a.download = `WoW_Stat_Trajectory_Report${langSuffix}_${timestamp}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // --- 4. 辅助与对比逻辑 ---
 
 /**
@@ -854,10 +1010,17 @@ function updateLanguageUI() {
   const langLabel = document.getElementById("langLabel");
   // @ts-ignore
   if (langLabel) langLabel.innerText = state.lang === "zh" ? "ZH" : "EN";
-  
+
+  // Update innerText for [data-i18n]
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     // @ts-ignore
     if (t[el.dataset.i18n]) /** @type {HTMLElement} */ (el).innerText = t[el.dataset.i18n];
+  });
+
+  // Update placeholder for [data-i18n-placeholder]
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    // @ts-ignore
+    if (t[el.dataset.i18nPlaceholder]) /** @type {HTMLInputElement|HTMLTextAreaElement} */ (el).placeholder = t[el.dataset.i18nPlaceholder];
   });
   
   const modeLabels = document.querySelectorAll(".mode-label-text");
@@ -887,6 +1050,12 @@ function updateLanguageUI() {
  */
 function resetApp() {
   if (confirm("Reset all settings?")) {
+    // Clear config note when resetting
+    localStorage.removeItem("configImportNote");
+    const noteEl = document.getElementById("configImportNote");
+    const displayEl = document.getElementById("configNoteDisplay");
+    if (noteEl) noteEl.value = "";
+    if (displayEl) displayEl.innerHTML = "";
     location.reload();
   }
 }
@@ -970,4 +1139,367 @@ function syncOptimal() {
   // @ts-ignore
   keys.forEach((k) => (state.customValues[k] = Math.round(state.optResults[k])));
   renderCustomInputs();
+}
+
+/**
+ * 生成成长模拟报告的 HTML 内容
+ * @param {{title: string, subtitle: string, timestamp: string, configNote: string, budgetRange: {min: number, max: number, step: number}, statsConfig: Object, trajData: {labels: number[], d: any, phases: any[]}, t: any}} opts
+ */
+function generateReportHTML(opts) {
+  const { title, subtitle, timestamp, configNote, budgetRange, statsConfig, trajData, t } = opts;
+  const { labels, d, phases, smoothScores } = trajData;
+
+  // 生成配置信息 HTML
+  let statsConfigHTML = "";
+  ["c", "h", "m", "v"].forEach((k) => {
+    const conf = statsConfig[k];
+    const intervalsHTML = conf.intervals
+      .map(
+        (inv, i) => `
+          <tr class="border-b border-slate-700/50">
+            <td class="py-2 px-3 text-xs text-gray-400">${i + 1}</td>
+            <td class="py-2 px-3 text-xs font-mono text-indigo-400">${inv.limit.toFixed(0)}</td>
+            <td class="py-2 px-3 text-xs font-mono text-emerald-400">${inv.a2.toExponential(4)}</td>
+            <td class="py-2 px-3 text-xs font-mono text-emerald-400">${inv.a1.toExponential(4)}</td>
+            <td class="py-2 px-3 text-xs font-mono text-emerald-400">${inv.a0.toFixed(6)}</td>
+          </tr>`,
+      )
+      .join("");
+
+    statsConfigHTML += `
+      <div class="bg-slate-800/50 rounded-lg p-4 mb-4 border border-slate-700">
+        <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-${k === "c" ? "fire" : k === "h" ? "bolt" : k === "m" ? "wand-magic" : "shield"}" style="color: ${STAT_CONFIG[k].color}"></i>
+          ${conf.name}
+        </h4>
+        <div class="grid grid-cols-2 gap-4 mb-3">
+          <div class="text-xs">
+            <span class="text-gray-500">${t.export_base_pct}</span>
+            <span class="text-white font-mono ml-2">${conf.base.toFixed(1)}%</span>
+          </div>
+          <div class="text-xs">
+            <span class="text-gray-500">${t.export_base_conv}</span>
+            <span class="text-white font-mono ml-2">${conf.conv.toFixed(2)}</span>
+          </div>
+        </div>
+        <h5 class="text-xs font-bold text-gray-400 uppercase mb-2">${t.export_intervals}</h5>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-900/50">
+              <tr>
+                <th class="py-2 px-3 text-left text-gray-500 font-normal">#</th>
+                <th class="py-2 px-3 text-left text-gray-500 font-normal">Limit</th>
+                <th class="py-2 px-3 text-left text-gray-500 font-normal">a₂</th>
+                <th class="py-2 px-3 text-left text-gray-500 font-normal">a₁</th>
+                <th class="py-2 px-3 text-left text-gray-500 font-normal">a₀</th>
+              </tr>
+            </thead>
+            <tbody>${intervalsHTML}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  });
+
+  // 生成策略阶段 HTML（带折叠功能）
+  let phasesHTML = "";
+  if (phases && phases.length > 0) {
+    // 为每个阶段计算详细的属性分配
+    const detailedPhases = phases.map((p, idx) => {
+      // 找到该阶段对应的轨迹数据点
+      const startIndex = labels.indexOf(p.start);
+      const endIndex = labels.indexOf(p.end);
+      
+      // 获取该阶段内各属性的分配区间
+      const statRanges = {};
+      ["c", "h", "m", "v"].forEach((k) => {
+        const startVal = d[k][startIndex];
+        const endVal = d[k][endIndex];
+        if (endVal - startVal > 0) {
+          statRanges[k] = { start: Math.round(startVal), end: Math.round(endVal) };
+        }
+      });
+      
+      return { ...p, statRanges };
+    });
+    
+    // 获取本地化的属性名称
+    const getStatName = (k) => {
+      // @ts-ignore
+      return state.lang === "zh" 
+        ? (k === "c" ? "爆击" : k === "h" ? "急速" : k === "m" ? "精通" : "全能")
+        : (k === "c" ? "Crit" : k === "h" ? "Haste" : k === "m" ? "Mastery" : "Vers");
+    };
+    
+    phasesHTML = `
+      <div class="bg-slate-800/50 rounded-lg p-4 mb-4 border border-slate-700">
+        <h4 class="text-sm font-bold text-white mb-3">${t.export_phases}</h4>
+        <div class="space-y-2">
+          ${detailedPhases
+            .map(
+              (p, i) => {
+                const statItems = Object.entries(p.statRanges)
+                  .map(([k, range]) => {
+                    return `<div class="flex items-center gap-2 text-[10px]">
+                      <span class="text-gray-500">${getStatName(k)}:</span>
+                      <span class="text-indigo-400 font-mono">${range.start} → ${range.end}</span>
+                    </div>`;
+                  })
+                  .join("");
+                
+                return `
+                  <div class="bg-slate-900/50 rounded border border-slate-700/50 overflow-hidden">
+                    <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.chevron-icon').classList.toggle('rotate-90')" class="w-full flex items-center justify-between px-3 py-2 bg-slate-800/50 hover:bg-slate-800/70 transition text-left">
+                      <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chevron-right chevron-icon text-gray-500 text-[8px] transition-transform"></i>
+                        <span class="w-2 h-2 rounded-full" style="background: ${Array.isArray(p.color) ? p.color[0] : p.color}"></span>
+                        <span class="text-xs font-bold text-gray-300">${p.label}</span>
+                      </div>
+                      <span class="text-xs font-mono text-indigo-400">${p.start} → ${p.end}</span>
+                    </button>
+                    ${statItems ? `<div class="hidden px-3 py-2 border-t border-slate-700/50 space-y-1 bg-slate-900/30">
+                      ${statItems}
+                    </div>` : ''}
+                  </div>
+                `;
+              }
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  // 渲染 Markdown 注释
+  const renderedNote = configNote.trim() ? marked.parse(configNote) : '<p class="text-gray-500 italic">No comments</p>';
+
+  return `<!DOCTYPE html>
+<html lang="${state.lang}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body { background-color: #0f172a; color: #cbd5e1; font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;800&display=swap');
+    /* Markdown Styles */
+    .markdown-content h1 { font-size: 1.75rem; font-weight: 700; color: #a5b4fc; margin: 1rem 0 0.5rem; }
+    .markdown-content h2 { font-size: 1.5rem; font-weight: 700; color: #a5b4fc; margin: 1rem 0 0.5rem; }
+    .markdown-content h3 { font-size: 1.25rem; font-weight: 700; color: #a5b4fc; margin: 1rem 0 0.5rem; }
+    .markdown-content p { margin: 0.5rem 0; }
+    .markdown-content strong { color: #ffffff; font-weight: 700; }
+    .markdown-content em { color: #94a3b8; font-style: italic; }
+    .markdown-content code { background: rgba(99, 102, 241, 0.2); padding: 0.1rem 0.3rem; border-radius: 0.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: #a5b4fc; }
+    .markdown-content pre { background: #0f172a; padding: 0.75rem; border-radius: 0.3rem; overflow-x: auto; margin: 0.75rem 0; }
+    .markdown-content pre code { background: transparent; padding: 0; color: #e2e8f0; }
+    .markdown-content ul, .markdown-content ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .markdown-content li { margin: 0.25rem 0; }
+    .markdown-content blockquote { border-left: 3px solid #6366f1; padding-left: 0.75rem; margin: 0.75rem 0; color: #94a3b8; }
+    .markdown-content a { color: #a5b4fc; text-decoration: underline; }
+  </style>
+</head>
+<body class="min-h-screen p-8">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <header class="mb-8 pb-6 border-b border-slate-700">
+      <h1 class="text-3xl font-bold text-white mb-2">${title}</h1>
+      <p class="text-sm text-gray-400 mb-4">${subtitle}</p>
+      <div class="flex flex-wrap gap-4 text-xs">
+        <span class="text-gray-500">${t.export_timestamp}</span>
+        <span class="text-white font-mono">${timestamp}</span>
+      </div>
+    </header>
+
+    <!-- Config Note -->
+    <section class="mb-8 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+      <h3 class="text-sm font-bold text-indigo-400 mb-3">${t.export_config_note}</h3>
+      <div id="configNoteContent" class="text-sm text-gray-300 markdown-content">
+        ${configNote.trim() ? '' : '<p class="text-gray-500 italic">No comments</p>'}
+      </div>
+    </section>
+
+    <!-- Budget Range -->
+    <section class="mb-8 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+      <h3 class="text-sm font-bold text-white mb-3">${t.export_budget_range}</h3>
+      <div class="flex items-center gap-4 text-sm">
+        <span class="text-gray-400">Min:</span>
+        <span class="text-white font-mono">${budgetRange.min}</span>
+        <span class="text-gray-400">Max:</span>
+        <span class="text-white font-mono">${budgetRange.max}</span>
+        <span class="text-gray-400">Step:</span>
+        <span class="text-white font-mono">${budgetRange.step}</span>
+      </div>
+    </section>
+
+    <!-- Stats Configuration -->
+    <section class="mb-8">
+      <h2 class="text-xl font-bold text-white mb-4">${t.export_stats_config}</h2>
+      ${statsConfigHTML}
+    </section>
+
+    <!-- Strategy Phases -->
+    ${phasesHTML}
+
+    <!-- Charts -->
+    <section class="mb-8">
+      <h2 class="text-xl font-bold text-white mb-6">Charts</h2>
+      
+      <!-- Percent Trajectory Chart -->
+      <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-6">
+        <h3 class="text-sm font-bold text-purple-400 mb-4 uppercase">${t.export_chart_pct}</h3>
+        <div class="h-[300px]"><canvas id="percentChart"></canvas></div>
+      </div>
+
+      <!-- Rating Trajectory Chart -->
+      <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-6">
+        <h3 class="text-sm font-bold text-blue-400 mb-4 uppercase">${t.export_chart_rating}</h3>
+        <div class="h-[300px]"><canvas id="ratingChart"></canvas></div>
+      </div>
+
+      <!-- Yield Chart -->
+      <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-6">
+        <h3 class="text-sm font-bold text-yellow-500 mb-4 uppercase">${t.export_chart_yield}</h3>
+        <div class="h-[300px]"><canvas id="yieldChart"></canvas></div>
+      </div>
+
+      <!-- Delta Chart -->
+      <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-6">
+        <h3 class="text-sm font-bold text-cyan-400 mb-4 uppercase">${t.export_chart_delta}</h3>
+        <div class="h-[300px]"><canvas id="deltaChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-gray-500 py-6 border-t border-slate-700">
+      Generated by WoW Stat Solver
+    </footer>
+  </div>
+
+  <script>
+    // Render Markdown comments
+    const configNoteContent = document.getElementById('configNoteContent');
+    const configNoteText = ${JSON.stringify(configNote || '')};
+    if (configNoteContent && configNoteText.trim()) {
+      configNoteContent.innerHTML = marked.parse(configNoteText);
+    }
+
+    // Data from solver
+    const labels = ${JSON.stringify(labels)};
+    const data = {
+      c: ${JSON.stringify(d.c)},
+      h: ${JSON.stringify(d.h)},
+      m: ${JSON.stringify(d.m)},
+      v: ${JSON.stringify(d.v)},
+      pcts: {
+        c: ${JSON.stringify(d.pcts.c)},
+        h: ${JSON.stringify(d.pcts.h)},
+        m: ${JSON.stringify(d.pcts.m)},
+        v: ${JSON.stringify(d.pcts.v)},
+      },
+      scores: ${JSON.stringify(d.scores)},
+      smoothScores: ${JSON.stringify(smoothScores)},
+    };
+
+    const colors = {
+      c: '#ef4444',
+      h: '#22c55e',
+      m: '#a855f7',
+      v: '#3b82f6',
+    };
+
+    // Percent Chart
+    new Chart(document.getElementById('percentChart'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Crit', data: data.pcts.c, borderColor: colors.c, tension: 0.3, pointRadius: 0 },
+          { label: 'Haste', data: data.pcts.h, borderColor: colors.h, tension: 0.3, pointRadius: 0 },
+          { label: 'Mastery', data: data.pcts.m, borderColor: colors.m, tension: 0.3, pointRadius: 0 },
+          { label: 'Vers', data: data.pcts.v, borderColor: colors.v, tension: 0.3, pointRadius: 0 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#cbd5e1' } } },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+        },
+      },
+    });
+
+    // Rating Chart
+    new Chart(document.getElementById('ratingChart'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Crit', data: data.c, borderColor: colors.c, tension: 0.3, pointRadius: 0 },
+          { label: 'Haste', data: data.h, borderColor: colors.h, tension: 0.3, pointRadius: 0 },
+          { label: 'Mastery', data: data.m, borderColor: colors.m, tension: 0.3, pointRadius: 0 },
+          { label: 'Vers', data: data.v, borderColor: colors.v, tension: 0.3, pointRadius: 0 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#cbd5e1' } } },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+        },
+      },
+    });
+
+    // Yield Chart
+    new Chart(document.getElementById('yieldChart'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{ label: 'Total Yield', data: data.scores, borderColor: '#eab308', tension: 0.3, pointRadius: 0 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#cbd5e1' } } },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+        },
+      },
+    });
+
+    // Delta Chart (using smoothScores for continuous delta)
+    new Chart(document.getElementById('deltaChart'), {
+      type: 'line',
+      data: {
+        labels: labels.slice(1),
+        datasets: [{
+          label: 'Marginal Delta',
+          data: data.smoothScores.slice(1).map((v, i) => v - data.smoothScores[i]),
+          borderColor: '#06b6d4',
+          tension: 0.3,
+          pointRadius: 0,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#cbd5e1' } } },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+        },
+      },
+    });
+  <\/script>
+</body>
+</html>`;
 }

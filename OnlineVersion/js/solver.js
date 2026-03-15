@@ -309,11 +309,25 @@ const Solver = {
       (k) => (state.stats[k].statBase = parseInt(/** @type {HTMLInputElement} */ (document.getElementById(`sim_base_${k}`)).value) || 0)
     );
 
-    const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-    
+    // 检测 Excel 保存特征
+    const hasTrailingCommas = /\n.*,+\s*$/.test(text);  // 行尾连续逗号
+    const hasNoSpacesAfterCommas = text.split("\n").some(l => /,\d/.test(l) && !/, \d/.test(l));  // 逗号后无空格
+
+    if (hasTrailingCommas || hasNoSpacesAfterCommas) {
+      alert("曲线文件经过 Excel 保存后格式不易解析，请手动处理后输入。\n\n" +
+            "建议：\n" +
+            "1. 使用原始 SimC 导出的 CSV 文件（不要用 Excel 保存）\n" +
+            "2. 或在 Excel 中另存为时选择 CSV UTF-8 格式，并移除千位分隔符");
+      throw new Error("Excel 格式检测：文件可能经过 Excel 保存，导致空格丢失和/或添加多余逗号");
+    }
+
+    const lines = text.split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
     /** @type {{c: {x:number, y:number}[], h: {x:number, y:number}[], m: {x:number, y:number}[], v: {x:number, y:number}[]}} */
     let statPoints = { c: [], h: [], m: [], v: [] };
-    
+
     /** @type {string|null} */
     let currentStat = null;
 
@@ -327,12 +341,20 @@ const Solver = {
 
       const m = lines[i].match(/-?[\d,.]+(?:e[+-]?\d+)?/gi);
       if (currentStat && m && m.length >= 2) {
-        const x = parseFloat(m[0].replace(/,/g, "")), 
+        const x = parseFloat(m[0].replace(/,/g, "")),
               y = parseFloat(m[1].replace(/,/g, ""));
         // @ts-ignore
         if (!isNaN(x) && !isNaN(y)) statPoints[currentStat].push({ x, y });
       }
     }
+
+    console.log('[SimC Import] Extracted points per stat:');
+    ["c", "h", "m", "v"].forEach((k) => {
+      // @ts-ignore
+      const count = statPoints[k]?.length || 0;
+      const statName = STAT_CONFIG[k]?.name || k;
+      console.log(`  ${statName}: ${count} points`);
+    });
 
     // @ts-ignore - Explicitly casting empty object to satisfy the complex type definition
     this.simImportTempData = {};
@@ -464,9 +486,24 @@ const Solver = {
 const ConfigManager = {
   /**
    * 将当前所有属性配置（区间、转化比、基础值）导出为自定义 .txt 格式文件
+   * 包含注释内容（以 #comments: 开头）
    */
   export() {
+    // Get config note from textarea or localStorage
+    const noteEl = document.getElementById("configImportNote");
+    const configNote = noteEl ? noteEl.value.trim() : (localStorage.getItem("configImportNote") || "");
+    
     let out = "";
+    
+    // Add comments at the beginning if exists
+    if (configNote) {
+      out += "#comments:\n";
+      configNote.split("\n").forEach(line => {
+        out += "#  " + line + "\n";
+      });
+      out += "\n";
+    }
+    
     ["c", "h", "m", "v"].forEach((k) => {
       // @ts-ignore
       const s = state.stats[k];
@@ -482,7 +519,14 @@ const ConfigManager = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `WoW_Stat_Config_${new Date().toISOString().slice(0, 10)}.txt`;
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const hh = String(now.getHours()).padStart(2, "0");
+    const min = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    a.download = `WoW_Stat_Config_${yy}-${mm}-${dd}-${hh}-${min}-${ss}.txt`;
     a.click();
   },
 
@@ -506,23 +550,79 @@ const ConfigManager = {
 
   /**
    * 解析配置文件内容并实时更新全局 state
+   * 支持导入 #comments: 开头的多行注释
    * @param {string} txt - 导出的配置文件文本内容
    */
   parse(txt) {
     try {
-      const lines = txt.split("\n").map((l) => l.trim()).filter((l) => l);
+      const lines = txt.split("\n");
+
+      // Parse comments first (lines starting with #)
+      let inComments = false;
+      let comments = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.startsWith("#comments:")) {
+          inComments = true;
+        } else if (inComments) {
+          if (line.startsWith("#")) {
+            // Remove "#  " prefix
+            const commentLine = line.replace(/^#\s*/, "");
+            if (commentLine.trim()) {
+              comments.push(commentLine);
+            }
+          } else if (line.trim() === "") {
+            // Empty line ends comment section
+            break;
+          } else {
+            // Non-comment, non-empty line ends comment section
+            break;
+          }
+        }
+      }
+
+      // Save comments to localStorage and update UI
+      const commentText = comments.join("\n");
       
+      // Always update localStorage and UI (even if empty)
+      if (commentText) {
+        localStorage.setItem("configImportNote", commentText);
+      } else {
+        localStorage.removeItem("configImportNote");
+      }
+      
+      // Update textarea and display
+      const noteEl = document.getElementById("configImportNote");
+      const displayEl = document.getElementById("configNoteDisplay");
+      if (noteEl) {
+        noteEl.value = commentText;
+        // Trigger auto-resize
+        noteEl.style.height = "auto";
+        const newHeight = Math.min(noteEl.scrollHeight, 180);
+        noteEl.style.height = newHeight + "px";
+      }
+      // Update display if in preview mode
+      if (displayEl) {
+        if (!displayEl.classList.contains("hidden")) {
+          displayEl.innerHTML = renderMarkdown(commentText);
+        }
+      }
+
+      // Parse config (skip comment lines)
+      const configLines = lines.filter(l => !l.startsWith("#")).map((l) => l.trim()).filter((l) => l);
+
       /** @type {string|null} */
       let curStat = null;
-      
+
       /** @type {any|null} */
       let curInt = null;
-      
+
       // @ts-ignore
       const newStats = JSON.parse(JSON.stringify(state.stats));
       ["c", "h", "m", "v"].forEach((k) => (newStats[k].intervals = []));
 
-      lines.forEach((l) => {
+      configLines.forEach((l) => {
         if (l.startsWith("Critical")) curStat = "c";
         else if (l.startsWith("Haste")) curStat = "h";
         else if (l.startsWith("Mastery")) curStat = "m";

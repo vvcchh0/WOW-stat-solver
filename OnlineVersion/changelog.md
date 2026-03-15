@@ -1,5 +1,119 @@
 # Changelog - OnlineVersion (CDN Edition)
 
+## [v1.7.0] - 2026-03-15
+> **Note**: v1.6.0 changes are merged into this release and were not published separately.
+
+### 🎉 New Features
+- **Growth Trajectory Report Export**: Export simulation results as a standalone HTML report.
+  - Includes configuration notes with Markdown rendering (powered by marked.js)
+  - Detailed stat configuration (Base %, Conversion Ratio, DR Intervals table)
+  - Strategy phase analysis with collapsible cards
+  - Four interactive charts:
+    - Stat Growth Trajectory (%)
+    - Rating Allocation Trajectory
+    - Total Yield Growth Curve
+    - Marginal Gain Delta (with smoothScores correction)
+  - Filename format: `WoW_Stat_Trajectory_Report_{zh|en}_{YY-MM-DD-HH-MM-SS}.html`
+  - Full bilingual support (Chinese/English)
+
+- **Markdown Rendering Enhancement**: Integrated marked.js library.
+  - Replaced handwritten Markdown parser (~60 lines of code)
+  - Full GFM (GitHub Flavored Markdown) support
+  - Better handling of edge cases (nested lists, complex code blocks)
+  - Support for tables, task lists, footnotes, and more
+  - OnlineVersion: loads from CDN `https://cdn.jsdelivr.net/npm/marked/marked.min.js`
+
+### 📊 Stat Updates
+- **Updated Base Conversion Ratios** (matching new game values):
+  - Critical Strike: 45.99 → **46**
+  - Haste: 44.01 → **44**
+  - Mastery: 45.99 → **46**
+  - Versatility: 53.97 → **54**
+
+- **Updated DR Thresholds**:
+  - Critical Strike: base_limit=1380, step_limit=460
+  - Haste: base_limit=1320, step_limit=440
+  - Mastery: base_limit=1380, step_limit=460
+  - Versatility: base_limit=1620, step_limit=540
+
+- **Interval Addition**: Now uses stat-specific `step_limit` instead of fixed 7000
+
+### 🎨 UI/UX Improvements
+- **Strategy Phase Collapsible Cards**: 
+  - Default collapsed state to save space
+  - Click to expand and view detailed stat allocation ranges
+  - Rotating chevron icon indicates expand/collapse state
+  - Localized stat names (爆击/急速/精通/全能 or Crit/Haste/Mastery/Vers)
+
+- **Formula Display Enhancement**:
+  - Total Damage Formula: `D = D₀ × ∏ᵢ StatGainᵢ` (white bold 1.5rem)
+  - Stat Gain Formula: `StatGainᵢ ≈ a₂xᵢ² + a₁xᵢ + a₀` (white bold 1.5rem)
+  - Uses `≈` symbol for mathematical accuracy (fitting approximation)
+
+- **Full i18n Support**:
+  - Export Report button text (导出报告 / Export Report)
+  - Config note label and placeholder
+  - Add interval button (添加区间 / ADD TIER)
+  - All export report sections
+
+### 🐛 Bug Fixes
+- **Report Timestamp Timezone**: Fixed inconsistency between Config export (local time) and Report export (UTC).
+  - Now both use local time with format `YY-MM-DD-HH-MM-SS`
+
+- **Delta Chart Missing Smooth Correction**: Fixed report's marginal gain chart using raw `scores` instead of smoothed `smoothScores`.
+  - Now correctly applies breakpoint smoothing for continuous curves
+
+- **Import Config Notes Not Showing**: Fixed `initStats` always clearing notes, which overrode imported comments.
+  - Now checks localStorage and preserves imported notes
+
+### 📁 Files Changed
+- `index.html`: Added marked.js CDN reference, Export Report button, data-i18n attributes
+- `js/config.js`: I18N dictionary expansion, state initial values update, STAT_CONFIG stat updates
+- `js/main.js`: New `exportTrajectoryReport()` and `generateReportHTML()` functions, Markdown rendering, timestamp fixes
+
+---
+
+## [v1.6.0] - 2026-03-14 (Merged into v1.7.0)
+### Added
+- **Config Import Note with Markdown Support**: New feature for adding and managing configuration notes.
+  - Full-width note area below stat cards with left-aligned bold label "注释："
+  - Edit/Preview toggle button (eye/pen icons)
+  - Markdown rendering support: headers, bold, italic, code, links, lists, blockquotes
+  - Auto-resize textarea (max 5 lines, then scroll)
+  - Real-time localStorage saving during editing
+
+- **Config Export/Import with Comments**: Enhanced configuration file format.
+  - Export includes `#comments:` section at the beginning
+  - Each comment line prefixed with `#  `
+  - Import automatically parses and displays comments
+  - Comments reset to empty on page load/refresh
+
+- **Enhanced Gain Formula Display**: Updated formula rendering.
+  - New formula: `StatGain = a_2 x^2 + a_1 x + a_0 (x = stat rating)`
+  - Variable changed from `X` to lowercase `x`
+  - Large white bold styling (1.5rem, font-weight 900)
+
+### Changed
+- **Export Filename Format**: Changed from `WoW_Stat_Config_YYYY-MM-DD.txt` to `WoW_Stat_Config_YY-MM-DD-HH-MM-SS.txt`
+  - Now includes timestamp down to seconds for unique filenames
+
+### Fixed
+- **Double Export Trigger**: Removed duplicate event binding on export button
+  - Removed inline `onclick` from HTML, kept only JS event listener
+- **Comment Refresh on Import**: Comments now properly reset when importing config without comments
+  - Empty comments clear localStorage and UI
+
+## [v1.5.0-MID] - 2026-03-12
+### Changed
+- **SimC Import Format Validation**: Added detection for Excel-modified CSV files.
+  - Detects trailing commas (empty columns) - a hallmark of Excel's CSV export
+  - Detects missing spaces after commas - original SimC format uses ", " while Excel uses ","
+  - Shows user-friendly alert with suggestions when Excel format is detected
+  - Throws error to prevent parsing corrupted data
+
+### Fixed
+- **Data Integrity**: Prevents silent failures when users accidentally save SimC CSV files in Excel
+
 ## [v1.5.0] - 2026-02-28
 ### Added
 - **Extension Correction (算法层断点修正)**: Implemented a fundamental fix for breakpoint jumps in the greedy algorithm.

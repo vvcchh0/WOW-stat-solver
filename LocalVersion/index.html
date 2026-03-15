@@ -31,6 +31,9 @@
     />
     <script src="js/vendor/katex.min.js"></script>
 
+    <!-- marked.js - Markdown Parser (Local) -->
+    <script src="js/vendor/marked.min.js"></script>
+
     <!-- Fonts (Local) -->
     <link rel="stylesheet" href="css/vendor/google-fonts.css" />
 
@@ -173,9 +176,90 @@
         display: none;
       }
 
+      /* Footer Formula - Large White Bold */
+      #footer-formula .katex {
+        color: #ffffff !important;
+        font-weight: 900 !important;
+        font-size: 1.5rem !important;
+      }
+
       .katex {
         color: inherit !important;
         font-family: "JetBrains Mono", serif;
+      }
+
+      /* Config Import Note - Auto-resize textarea */
+      #configImportNote {
+        font-family: "Inter", sans-serif !important;
+        font-size: 0.875rem !important;
+        line-height: 1.5;
+        min-height: 2.25rem;
+        max-height: 11.25rem;
+        overflow-y: auto;
+      }
+
+      /* Config Note Display - Markdown rendered */
+      #configNoteDisplay {
+        font-family: "Inter", sans-serif;
+        font-size: 0.875rem;
+        line-height: 1.6;
+        color: #cbd5e1;
+      }
+      #configNoteDisplay :first-child {
+        margin-top: 0;
+      }
+      #configNoteDisplay :last-child {
+        margin-bottom: 0;
+      }
+      #configNoteDisplay p {
+        margin: 0.25rem 0;
+      }
+      #configNoteDisplay code {
+        background: rgba(99, 102, 241, 0.2);
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.2rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8em;
+        color: #a5b4fc;
+      }
+      #configNoteDisplay pre {
+        background: #0f172a;
+        padding: 0.5rem;
+        border-radius: 0.3rem;
+        overflow-x: auto;
+        margin: 0.5rem 0;
+      }
+      #configNoteDisplay pre code {
+        background: transparent;
+        padding: 0;
+        color: #e2e8f0;
+      }
+      #configNoteDisplay ul, #configNoteDisplay ol {
+        margin: 0.25rem 0;
+        padding-left: 1.2rem;
+      }
+      #configNoteDisplay li {
+        margin: 0.1rem 0;
+      }
+      #configNoteDisplay strong {
+        color: #ffffff;
+        font-weight: 700;
+      }
+      #configNoteDisplay em {
+        color: #94a3b8;
+        font-style: italic;
+      }
+      #configNoteDisplay blockquote {
+        border-left: 3px solid #6366f1;
+        padding-left: 0.75rem;
+        margin: 0.5rem 0;
+        color: #94a3b8;
+      }
+      #configNoteDisplay h1, #configNoteDisplay h2, #configNoteDisplay h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #a5b4fc;
+        margin: 0.5rem 0;
       }
 
       /* Modal Overlay */
@@ -280,7 +364,6 @@
         <!-- File System -->
         <button
           id="btnExport"
-          onclick="ConfigManager.export()"
           class="text-xs bg-amber-700/20 hover:bg-amber-700/40 text-amber-500 font-bold border border-amber-700/50 px-3 py-1.5 rounded transition flex items-center gap-2"
         >
           <i class="fa-solid fa-file-export"></i>
@@ -380,10 +463,43 @@
           <div id="container_v"></div>
         </div>
 
+        <!-- Config Import Note Area -->
         <div
-          class="text-[10px] text-gray-600 mt-4 text-center pb-8 border-t border-slate-800 pt-4 font-mono"
+          class="mt-4 mb-2"
         >
-          Model: $Gain = a_2 \cdot x^2 + a_1 \cdot x + a_0$ (Segmented)
+          <div class="flex items-start gap-3 bg-slate-800/50 border border-slate-700 rounded px-4 py-3 w-full">
+            <span class="text-base font-bold text-indigo-400 shrink-0" style="font-size: 1.1rem;" data-i18n="config_note_label">注释：</span>
+            <div class="flex-1">
+              <!-- Edit Mode -->
+              <textarea
+                id="configImportNote"
+                class="w-full bg-transparent border-none text-sm text-gray-300 resize-none focus:outline-none"
+                rows="2"
+                data-i18n-placeholder="config_note_placeholder"
+                placeholder="在此输入配置导入相关的注释内容 (支持 Markdown)..."
+              ></textarea>
+              <!-- Preview Mode (rendered Markdown) -->
+              <div
+                id="configNoteDisplay"
+                class="hidden w-full"
+              ></div>
+            </div>
+            <button
+              id="btnToggleNoteMode"
+              class="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-600/50 px-2 py-1 rounded transition shrink-0"
+              onclick="toggleNoteMode()"
+            >
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Gain Formula -->
+        <div
+          class="text-center pb-8 border-t border-slate-800 pt-4"
+        >
+          <div id="footer-formula-damage" class="text-white font-bold" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></div>
+          <div id="footer-formula" class="text-white font-bold" style="font-size: 1.5rem;"></div>
         </div>
       </main>
 
@@ -708,12 +824,22 @@
               >Growth Trajectory Simulation</span
             >
           </h3>
-          <button
-            onclick="closeTrajectoryModal()"
-            class="text-gray-400 hover:text-white hover:bg-slate-700/50 w-8 h-8 flex items-center justify-center rounded-full transition"
-          >
-            <i class="fa-solid fa-xmark text-lg"></i>
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              onclick="exportTrajectoryReport()"
+              class="text-xs bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-500 font-bold border border-emerald-600/50 px-3 py-1.5 rounded transition flex items-center gap-2"
+              title="Export Report as HTML"
+            >
+              <i class="fa-solid fa-file-export"></i>
+              <span data-i18n="export_report_btn">Export Report</span>
+            </button>
+            <button
+              onclick="closeTrajectoryModal()"
+              class="text-gray-400 hover:text-white hover:bg-slate-700/50 w-8 h-8 flex items-center justify-center rounded-full transition"
+            >
+              <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+          </div>
         </div>
         <div
           class="flex-1 p-4 lg:p-6 relative bg-[#0f172a] overflow-hidden overflow-y-auto space-y-8"
@@ -973,7 +1099,7 @@
             class="add-interval-btn text-[10px] font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-400 px-3 py-1.5 rounded transition flex items-center gap-1.5"
           >
             <i class="fa-solid fa-plus"></i>
-            <span class="add-label">ADD TIER</span>
+            <span class="add-label" data-i18n="add_interval_label">ADD TIER</span>
           </button>
           <div class="text-right">
             <div
