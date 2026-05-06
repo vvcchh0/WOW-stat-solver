@@ -128,8 +128,8 @@ const Solver = {
    * @returns {{labels: number[], d: {c: number[], h: number[], m: number[], v: number[], scores: number[], smoothScores: number[], pcts: {c: number[], h: number[], m: number[], v: number[]}}}}
    */
   generateTrajectory() {
-    const minB = 1000,
-      maxB = 20000,
+    const minB = 0,
+      maxB = 5000,
       step = 200,
       labels = [],
       d = {
@@ -146,33 +146,6 @@ const Solver = {
             v: /** @type {number[]} */ ([])
         },
       };
-
-    // 预计算断点修正因子 (用于 smoothScores 可视化修正)
-    // 注意：仅对跨越边界的那一个点应用修正，而非整体应用
-    const breakpoints = {};
-    ["c", "h", "m", "v"].forEach((k) => {
-      breakpoints[k] = [];
-      // @ts-ignore
-      const invs = state.stats[k].intervals || [];
-      // 确保按 limit 排序
-      const sorted = [...invs].sort((a, b) => a.limit - b.limit);
-
-      for (let i = 0; i < sorted.length - 1; i++) {
-        const prev = sorted[i];
-        const next = sorted[i + 1];
-        const limit = prev.limit;
-
-        // 计算断点两侧的函数值
-        const vLeft = Utils.evalPoly(limit, prev.a2, prev.a1, prev.a0);
-        const vRight = Utils.evalPoly(limit, next.a2, next.a1, next.a0);
-
-        // 计算修正因子 (pM1/pM2)
-        // 用于修正跨越边界点的 smoothScore
-        if (vRight !== 0) {
-          breakpoints[k].push({ limit: limit, factor: vLeft / vRight });
-        }
-      }
-    });
 
     // 记录上一步的分配结果，用于检测跨越
     let prevRes = null;
@@ -199,17 +172,23 @@ const Solver = {
       d.scores.push(Utils.calculateTotalScore(res));
 
       // 2. 计算平滑总分 (用于 Delta 图可视化)
-      // 策略：累积应用所有已跨越断点的修正因子
+      // 策略：根据各区间的 applySmoothing 配置，累积应用修正因子
       let smoothTotal = Utils.calculateTotalScore(res);
 
-      // 对每个属性，累积所有已跨越断点的修正因子
+      // 对每个属性，检查跨越的断点，若后一区间的 applySmoothing=true 则应用修正
       ["c", "h", "m", "v"].forEach((k) => {
         const val = res[k];
         // @ts-ignore
-        breakpoints[k].forEach((bp) => {
-          // 只要当前值超过了断点，就应用修正因子（累积）
-          if (val > bp.limit) {
-            smoothTotal *= bp.factor;
+        const breakpoints = Utils.getBreakpoints(k);
+        
+        breakpoints.forEach((bp) => {
+          // 只要当前值超过了断点，且后一区间的 applySmoothing=true，就应用修正因子
+          if (val > bp.limit && bp.nextInterval.applySmoothing) {
+            const pM1 = Utils.evalPoly(bp.limit, bp.prevInterval.a2, bp.prevInterval.a1, bp.prevInterval.a0);
+            const pM2 = Utils.evalPoly(bp.limit, bp.nextInterval.a2, bp.nextInterval.a1, bp.nextInterval.a0);
+            if (pM2 !== 0) {
+              smoothTotal *= (pM1 / pM2);
+            }
           }
         });
       });
@@ -429,6 +408,7 @@ const Solver = {
               a0: Number(a0.toPrecision(4)),
               r2: r2_lin,
               type: "Lin",
+              applySmoothing: true,  // 默认启用平滑修正（SimC 拟合数据通常有断点跳变需要平滑）
             });
           } else {
             // B. 否则执行二阶多项式拟合
@@ -453,7 +433,7 @@ const Solver = {
             const q2 = m[2][3] / m[2][2],
                   q1 = (m[1][3] - m[1][2] * q2) / m[1][1],
                   q0 = (m[0][3] - m[0][2] * q2 - m[0][1] * q1) / m[0][0];
-            
+
             let ssres_quad = 0;
             slice.forEach((/** @type {{x:number, y:number}} */ p) => {
               const x = p.x, r = p.y / D0;
@@ -469,6 +449,7 @@ const Solver = {
               a0: Number(q0.toPrecision(4)),
               r2: r2_quad,
               type: "Quad",
+              applySmoothing: true,  // 默认启用平滑修正（SimC 拟合数据通常有断点跳变需要平滑）
             });
           }
         }
@@ -511,7 +492,7 @@ const ConfigManager = {
       out += `${STAT_CONFIG[k].export_name}:\n{\nSPEC BASE = ${s.basePct}\nRATING/1% = ${s.conv}\nSTAT BASE RATING = ${s.statBase}\n`;
       s.intervals.forEach(
         (/** @type {Interval} */ inv, /** @type {number} */ i) =>
-          (out += `INTERVAL${i + 1}\n{\nRANGEMAX = ${inv.limit}\na2 = ${inv.a2}\na1 = ${inv.a1}\na0 = ${inv.a0}\n}\n`)
+          (out += `INTERVAL${i + 1}\n{\nRANGEMAX = ${inv.limit}\na2 = ${inv.a2}\na1 = ${inv.a1}\na0 = ${inv.a0}\nAPPLY_SMOOTHING = ${inv.applySmoothing ? 'true' : 'false'}\n}\n`)
       );
       out += `}\n\n`;
     });
@@ -637,6 +618,12 @@ const ConfigManager = {
           else if (l.startsWith("INTERVAL")) curInt = {};
           else if (l === "}" && curInt) {
             curInt.id = Date.now() + Math.random();
+            // 默认 applySmoothing 为 false（向后兼容旧配置）
+            // 设计说明：旧配置可能是用户手动调整的真实断点，不应默认平滑；
+            //          SimC 导入数据默认 true 是因为拟合断点多为数值误差需要平滑
+            if (curInt.applySmoothing === undefined) {
+              curInt.applySmoothing = false;
+            }
             newStats[curStat].intervals.push(curInt);
             curInt = null;
           } else if (curInt) {
@@ -648,6 +635,7 @@ const ConfigManager = {
               else if (k === "a2") curInt.a2 = v;
               else if (k === "a1") curInt.a1 = v;
               else if (k === "a0") curInt.a0 = v;
+              else if (k === "APPLY_SMOOTHING") curInt.applySmoothing = (v === 1 || p[1].trim().toLowerCase() === 'true');
             }
           }
         }

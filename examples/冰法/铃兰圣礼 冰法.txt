@@ -1,0 +1,188 @@
+# Base Actor
+# 铃兰圣礼 - Frost - 2026-04-30 17:19 - CN/主宰之剑
+# SimC Addon 12.0.5-01
+# WoW 12.0.5.67235, TOC 120005
+# Requires SimulationCraft 1000-01 or newer
+
+mage="铃兰圣礼"
+level=90
+race=night_elf
+region=cn
+server=主宰之剑
+role=spell
+professions=tailoring=100/enchanting=100
+spec=frost
+# loot_spec=arcane
+
+talents=CAEAMhlVtghLZL4RZzExaQoBYNzwYZmZmlhZmYmZmZmZmZWMzMMjZGmMzysAAmZmZZZmpNAAYDAAAYBgtlxMzMY2GGzMWAAAYmtZGMDMgZwA
+
+# Saved Loadout: pvp
+# talents=CAEAMhlVtghLZL4RZzExaQoBYNmtlZWmZegZxmZGMDzMzMzMLmZGmxMzyMmZWmFAwMzMLLzM2AAgFAAAgNA2WGzMzALzYmZGLAAAMz2MDmhxAAD
+# Saved Loadout: 疾咒aoe
+# talents=CAEAMhlVtghLZL4RZzExaQoBYNzwYZmZmlhZGMzMzMzMzMLmZGmxMDDzsMLAgZmZWWmZsBAAbAAAALAstMmZmBz2wYmxCAAAzsNzgZgBMDGA
+# Saved Loadout: 疾咒纯单
+# talents=CAEAMhlVtghLZL4RZzExaQoBYNzwYZmZmlxMzgZmZMmxMLmZmZmxMDDzsMLAgZmZWWmZsBAAAAAA2AYbZMzMDml5BMmhFAAAmZZmBzADYGMA
+# Saved Loadout: 团本
+# talents=CAEAMhlVtghLZL4RZzExaQoBYZGLjlZmZWGmZwMzMmZmZmFzMzYGzMMMzysAAmZmZZZmxGAAsBAAAsBw2yYmZmHgZbYMDLAAAMz2MDmBGwMYA
+
+# 虚空粉碎者的魔网节点 (276)
+shoulder=,id=250058,enchant_id=8001,bonus_id=6652/13440/13340/13574/12802
+# 虚空粉碎者长袍 (276)
+chest=,id=250063,enchant_id=7987,bonus_id=13334/13336/6652/13575/12798
+# 虚空粉碎者的手套 (276)
+hands=,id=250061,bonus_id=6652/13440/13337/13574/12802
+# 虚空粉碎者的短裤 (289)
+legs=,id=250059,enchant_id=7935,bonus_id=12806/6652/13335/13339/13575/3174
+# 艾林先知的凝视 (289)
+trinket1=,id=249343,bonus_id=41/13335/12806
+# 威厄高尔的最终凝视 (276)
+trinket2=,id=249346,bonus_id=6652/13334/12798
+
+### Gear from Bags
+#
+# 虚空粉碎者的面纱 (276)
+# head=,id=250060,enchant_id=8017,gem_id=240914,bonus_id=13334/6652/13534/13338/13575/12798
+#
+# 隐秘真理面容 (279)
+# head=,id=260370,enchant_id=8017,bonus_id=6652/12667/13577/13335/12803/10844,crafted_stats=32/49
+#
+# 虚空粉碎者的面纱 (276)
+# head=,id=250060,enchant_id=8017,bonus_id=13334/13338/6652/12667/13575/12798
+#
+# 盘绕恶意丝带 (289)
+# neck=,id=249337,gem_id=240967,bonus_id=6652/13668/13335/12806
+#
+# 萨拉斯竞争者的护符 (242)
+# neck=,id=240952,gem_id=241144,bonus_id=12245/13760/12496/13571/13448/8792,crafted_stats=36/49,crafting_quality=4
+#
+# 艾泽拉斯之心 (371)
+# neck=,id=158075,bonus_id=4932/4933/4935/1479
+#
+# 虚空粉碎者的魔网节点 (276)
+# shoulder=,id=250058,enchant_id=8001,bonus_id=13334/13340/6652/13574/12798
+#
+# 黑暗奉献护肩 (276)
+# shoulder=,id=251085,enchant_id=8001,bonus_id=13440/6652/13577/12699/12798
+#
+# 星河好战者的披风 (250)
+# back=,id=255916,bonus_id=13449/13577/12782
+#
+# 雷什裹布 (170)
+# back=,id=235499,enchant_id=7403,gem_id=238044,bonus_id=12401/9893/12257
+#
+# 信徒的流丝罩袍 (285)
+# back=,id=239656,bonus_id=12214/12497/12066/8960/12384/8791/13622,crafted_stats=36/40,crafting_quality=5
+#
+# 流光织锦披风 (272)
+# back=,id=251206,bonus_id=12801/13440/6652/13577/12699
+#
+# 法夜之心 (49)
+# chest=,id=173241,bonus_id=7727/6718/8156/6647/6649/1522
+#
+# 星河角斗士的丝质长袍 (263)
+# chest=,id=255357,enchant_id=7987,bonus_id=13448/13577/13452/12790
+#
+# 白色冒险者衬衣 (1)
+# shirt=,id=6795
+#
+# 星河角斗士的丝质腕甲 (263)
+# wrist=,id=255372,bonus_id=13448/13577/13554/13452/12790
+#
+# 殉难者的裹腕 (285)
+# wrist=,id=239648,bonus_id=12214/12497/12066/8960/12384/8791/13622/12667,crafted_stats=49/32,crafting_quality=5
+#
+# 虚空粉碎者的贤者腰索 (289)
+# waist=,id=250057,gem_id=240898,bonus_id=12806/6652/13335/13534/3174
+#
+# 魔网护腿 (272)
+# legs=,id=251205,bonus_id=12801/13440/6652/13577/12699
+#
+# 梦境灼烧长靴 (289)
+# feet=,id=249373,enchant_id=7963,bonus_id=6652/13577/13335/12806
+#
+# 星河好战者的便鞋 (250)
+# feet=,id=255883,enchant_id=7963,bonus_id=13449/13577/12782
+#
+# 白金星辰指环 (276)
+# finger1=,id=193708,enchant_id=7967,gem_id=240908,bonus_id=13440/6652/13668/12699/12798
+#
+# 饥饿野兽指环 (289)
+# finger1=,id=249336,enchant_id=7967,gem_id=240892,bonus_id=6652/13668/13335/12806
+#
+# 虚空的遮蔽 (276)
+# finger1=,id=251217,bonus_id=13440/6652/13668/12699/12798
+#
+# 圣光的遗落 (276)
+# finger1=,id=251093,enchant_id=7997,gem_id=240907,bonus_id=13440/6652/13668/12699/12798
+#
+# 萨拉斯竞争者的玺戒 (242)
+# finger1=,id=240951,enchant_id=7995,gem_id=240893,bonus_id=12245/13760/12496/13571/13448/13453/8960/8792,crafted_stats=40/49,crafting_quality=4
+#
+# 萨拉斯竞争者的玺戒 (242)
+# finger1=,id=240951,enchant_id=7995,gem_id=240915,bonus_id=12245/13760/12496/13571/13448/13453/8960/8792,crafted_stats=49/40,crafting_quality=4
+#
+# 星河角斗士的活跃徽记 (263)
+# trinket1=,id=255614,bonus_id=13448/13452/12790
+#
+# 星河角斗士的勋章 (263)
+# trinket1=,id=255616,bonus_id=13448/13452/12790
+#
+# 星河角斗士的法杖 (263)
+# main_hand=,id=255622,enchant_id=8039,bonus_id=13448/13452/12790
+#
+# 黑檀之寒 (52)
+# main_hand=,id=128862,gem_id=137380/140813/137272,bonus_id=731/3161,gem_bonus_id=6652/1651/1809/3/9089/1665/1809/4/6710/6652/1647/1809/0/0
+#
+# 核闪多用仪 (289)
+# main_hand=,id=251201,enchant_id=8039,bonus_id=13440/6652/12701/12806
+#
+# 艾林哈籁手杖 (285)
+# main_hand=,id=245770,enchant_id=8039,bonus_id=12214/12497/12066/12693/8960/8791/13622,crafted_stats=36/32,crafting_quality=5
+#
+# 奈扎尔的虚空爪 (285)
+# off_hand=,id=258523,bonus_id=13440/6652/12699/12805
+
+### Additional Character Info
+#
+# catalyst_currencies=3269:8/3378:6/2813:8/3116:8
+#
+# upgrade_currencies=c:3347:4/c:3383:60/c:1813:15025/c:3341:50/c:3343:30/c:1792:6842/c:3345:10/i:232875:2/i:256559:15
+#
+# slot_high_watermarks=0:279:279/1:289:289/2:276:276/3:276:276/4:289:289/5:289:289/6:289:289/7:285:285/8:276:276/9:276:276/10:276:276/11:285:285/12:289:289/13:266:266/14:0:144/15:0:102/16:285:285
+#
+# upgrade_achievements=40107/40115/40118/40942/40943/40944/40945/41886/41887/41888/41892/42767/42768/42769/61809
+
+# Checksum: 7901c598
+name=铃兰圣礼
+
+# Consumables
+
+# Expansion Options
+temporary_enchant=
+midnight.crucible_of_erratic_energies_violence=1
+midnight.crucible_of_erratic_energies_sustenance=1
+midnight.crucible_of_erratic_energies_predation=1
+
+# Actors
+
+# Simulation Options
+iterations=100000
+desired_targets=2
+max_time=300
+calculate_scale_factors=0
+scale_only=strength,intellect,agility,crit,mastery,vers,haste,weapon_dps,weapon_offhand_dps
+override.bloodlust=1
+override.arcane_intellect=1
+override.power_word_fortitude=1
+override.battle_shout=1
+override.mystic_touch=1
+override.chaos_brand=1
+override.skyfury=1
+override.mark_of_the_wild=1
+override.hunters_mark=1
+override.bleeding=1
+report_details=1
+single_actor_batch=1
+optimize_expressions=1
+target_error=0.1
+dps_plot_positive=1

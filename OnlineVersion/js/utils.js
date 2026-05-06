@@ -87,7 +87,7 @@ const Utils = {
       { limit: 50 * scale, eff: 0.8 },
       { limit: 60 * scale, eff: 0.7 },
       { limit: 80 * scale, eff: 0.6 },
-      { limit: Infinity, eff: 0.0 }
+      { limit: Infinity, eff: 0.5 }
     ];
   },
 
@@ -242,15 +242,16 @@ const Utils = {
    * @param {string} statKey
    * @param {number} curX
    * @param {number} nextX
-   * @returns {{limit: number, pM1: number, pM2: number} | null}
+   * @returns {{limit: number, pM1: number, pM2: number, nextInterval: Interval} | null}
    *          pM1 = 断点前区间在 limit 处的 multiplier
    *          pM2 = 断点后区间在 limit 处的 multiplier
+   *          nextInterval = 断点后的区间（用于检查 applySmoothing）
    */
   checkBreakpointCrossing(statKey, curX, nextX) {
     if (curX >= nextX) return null;  // 只检查递增方向
 
     const breakpoints = this.getBreakpoints(statKey);
-    
+
     for (const bp of breakpoints) {
       // 检查是否跨越此断点：curX <= limit < nextX
       if (curX <= bp.limit && bp.limit < nextX) {
@@ -259,7 +260,8 @@ const Utils = {
         return {
           limit: bp.limit,
           pM1: pM1,
-          pM2: pM2
+          pM2: pM2,
+          nextInterval: bp.nextInterval  // 返回后一个区间，用于检查 applySmoothing
         };
       }
     }
@@ -268,16 +270,17 @@ const Utils = {
   },
 
   /**
-   * [延拓增益计算] 计算考虑断点延拓的相对增益
+   * [延拓增益计算] 计算考虑断点平滑修正的相对增益
    * 当从 curX 到 nextX 跨越断点 p 时：
    *   gain = (nextM / pM2) × (pM1 / curM)
    *        = (nextM / curM) × (pM1 / pM2)
-   * 其中 pM1/pM2 是延拓修正因子，用于"缝合"断点处的跳变
+   * 其中 pM1/pM2 是平滑修正因子，用于"缝合"断点跳变
+   * 是否应用修正取决于后一区间的 applySmoothing 配置
    *
    * @param {string} statKey
    * @param {number} curX - 当前值
    * @param {number} nextX - 下一步值
-   * @returns {number} 延拓后的相对增益
+   * @returns {number} 平滑修正后的相对增益
    */
   getGainWithExtension(statKey, curX, nextX) {
     const curM = this.getMultiplier(statKey, curX);
@@ -287,16 +290,19 @@ const Utils = {
 
     // 检查是否跨越断点
     const crossing = this.checkBreakpointCrossing(statKey, curX, nextX);
-    
+
     if (crossing && crossing.pM2 !== 0) {
-      // 跨越断点：应用延拓修正
-      // gain = (nextM / pM2) × (pM1 / curM)
-      const rawGain = nextM / curM;
-      const extensionFactor = crossing.pM1 / crossing.pM2;
-      return rawGain * extensionFactor;
+      // 跨越断点：检查后一区间的 applySmoothing 配置
+      if (crossing.nextInterval.applySmoothing) {
+        // 应用平滑修正
+        // gain = (nextM / pM2) × (pM1 / curM)
+        const rawGain = nextM / curM;
+        const smoothingFactor = crossing.pM1 / crossing.pM2;
+        return rawGain * smoothingFactor;
+      }
     }
 
-    // 未跨越断点：使用原始增益
+    // 未跨越断点 或 未启用平滑修正：使用原始增益
     return nextM / curM;
   },
 };

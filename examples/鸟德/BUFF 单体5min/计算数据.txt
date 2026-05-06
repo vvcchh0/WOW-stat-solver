@@ -1,0 +1,97 @@
+#comments:
+#  # 鸟德 单体天赋，满BUFF 单目标5分钟
+#  ## 相对误差0.3%，Patchwerk
+#  ## 四件套，带H黄眼，PT蓝眼
+
+Critical Strike:
+{
+SPEC BASE = 5
+RATING/1% = 46
+STAT BASE RATING = 143
+INTERVAL1
+{
+RANGEMAX = 1240
+a2 = 0
+a1 = 0.0002137
+a0 = 1
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.0002024
+a0 = 1.013
+APPLY_SMOOTHING = true
+}
+}
+
+Haste:
+{
+SPEC BASE = 0
+RATING/1% = 44
+STAT BASE RATING = 157
+INTERVAL1
+{
+RANGEMAX = 1160
+a2 = 0
+a1 = 0.0001996
+a0 = 1.005
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.0001632
+a0 = 1.046
+APPLY_SMOOTHING = true
+}
+}
+
+Mastery:
+{
+SPEC BASE = 10.5
+RATING/1% = 61.33
+STAT BASE RATING = 398
+INTERVAL1
+{
+RANGEMAX = 980
+a2 = 0
+a1 = 0.000198
+a0 = 1.002
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1440
+a2 = 0
+a1 = 0.0001796
+a0 = 1.019
+APPLY_SMOOTHING = true
+}
+INTERVAL3
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.0001713
+a0 = 1.03
+APPLY_SMOOTHING = true
+}
+}
+
+Versatility:
+{
+SPEC BASE = 0
+RATING/1% = 54
+STAT BASE RATING = 0
+INTERVAL1
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.000175
+a0 = 1.002
+APPLY_SMOOTHING = true
+}
+}
+

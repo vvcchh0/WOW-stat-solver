@@ -1,5 +1,35 @@
 # Changelog - LocalVersion (Localized Edition)
 
+## [v1.8.0] - 2026-03-25
+
+### 🎉 New Features
+- **Interval-Level Smoothing Control** (`applySmoothing`):
+  - Each interval (after the first) can now independently enable/disable discontinuity correction at its boundary with the previous interval.
+  - UI: A checkbox labeled "平滑/Smooth" appears for each interval, allowing users to toggle smoothing for that segment's entry discontinuity.
+  - Export/Import: The `APPLY_SMOOTHING = true/false` setting is saved in configuration files for sharing and reproducibility.
+  - **Design Philosophy**: Correction is applied based on the *destination* interval's setting—when crossing into an interval with `applySmoothing=true`, the jump is smoothed.
+  - **Default Behavior**: Smoothing is **enabled by default** (`applySmoothing: true`) for SimC imported data, providing smoother results out-of-the-box. Users can disable it selectively for intervals with genuine game mechanic discontinuities.
+  - **Full I18N Support**: Smoothing UI labels are translated:
+    - Chinese: "平滑" (checkbox), "起点" (first interval), tooltip: "平滑与前区间的断点跳变"
+    - English: "Smooth" (checkbox), "Origin" (first interval), tooltip: "Smooth discontinuity with previous interval"
+
+### 🔧 Technical Improvements
+- **`utils.js`**: `getGainWithExtension()` now checks the destination interval's `applySmoothing` flag before applying correction.
+- **`solver.js`**: 
+  - `generateTrajectory()` computes `smoothScores` dynamically based on each interval's `applySmoothing` setting.
+  - `ConfigManager` exports/imports `APPLY_SMOOTHING` for each interval.
+  - SimC fitting initializes all intervals with `applySmoothing: false`.
+- **`main.js`**: 
+  - Interval rendering includes a checkbox for `applySmoothing` (first interval shows "起点" label).
+  - `addInterval()` sets `applySmoothing: false` for new intervals.
+- **`charts.js`**: Updated comments to reflect the new `applySmoothing`-based smoothing logic.
+
+### 📝 User Experience
+- **Transparent Control**: Users can now decide which discontinuities are fitting artifacts (enable smoothing) vs. genuine game mechanics (preserve raw jumps).
+- **Backward Compatible**: Old configurations without `APPLY_SMOOTHING` default to `false` (no smoothing).
+
+---
+
 ## [v1.7.0] - 2026-03-15
 > **Note**: v1.6.0 changes are merged into this release and were not published separately.
 

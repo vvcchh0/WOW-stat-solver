@@ -429,17 +429,22 @@ function renderStatCard(key) {
   const list = /** @type {HTMLElement} */ (tpl.querySelector(".intervals-list"));
   list.innerHTML = "";
   // @ts-ignore
-  state.stats[key].intervals.forEach((/** @type {any} */ inv) => {
+  state.stats[key].intervals.forEach((/** @type {any} */ inv, /** @type {number} */ idx) => {
     const r = document.createElement("div");
     r.className = "grid grid-cols-12 gap-1 items-center bg-[#020617] p-2 rounded border border-slate-700/50 mb-1";
     // @ts-ignore
     const canDel = state.stats[key].intervals.length > 1;
-    
+
+    // @ts-ignore
+    const i18n = I18N[state.lang];
     r.innerHTML = `
       <div class="col-span-3"><input type="number" data-f="limit" class="tiny-input w-full text-center text-gray-300" value="${inv.limit}"></div>
       <div class="col-span-2"><input type="number" step="0.000001" data-f="a2" class="tiny-input w-full text-center text-blue-300" value="${inv.a2}"></div>
-      <div class="col-span-3"><input type="number" step="0.00001" data-f="a1" class="tiny-input w-full text-center text-green-300" value="${inv.a1}"></div>
-      <div class="col-span-3"><input type="number" step="0.01" data-f="a0" class="tiny-input w-full text-center text-purple-300" value="${inv.a0}"></div>
+      <div class="col-span-2"><input type="number" step="0.00001" data-f="a1" class="tiny-input w-full text-center text-green-300" value="${inv.a1}"></div>
+      <div class="col-span-2"><input type="number" step="0.01" data-f="a0" class="tiny-input w-full text-center text-purple-300" value="${inv.a0}"></div>
+      <div class="col-span-2 flex justify-center items-center" title="${i18n.smoothing_title}">
+        ${idx > 0 ? `<label class="flex items-center gap-1 cursor-pointer whitespace-nowrap"><input type="checkbox" data-f="applySmoothing" class="smoothing-checkbox" ${inv.applySmoothing ? 'checked' : ''}><span class="text-xs text-cyan-400">${i18n.smoothing_checkbox}</span></label>` : `<span class="text-xs text-slate-600">${i18n.smoothing_origin}</span>`}
+      </div>
       <div class="col-span-1 flex justify-center">
         ${canDel ? '<button class="text-red-500 hover:text-red-400 text-xs del-btn"><i class="fa-solid fa-times"></i></button>' : ""}
       </div>`;
@@ -447,9 +452,15 @@ function renderStatCard(key) {
     r.querySelectorAll("input").forEach((i) =>
       i.addEventListener("change", (e) => {
         // @ts-ignore
-        inv[e.target.dataset.f] = parseFloat(e.target.value);
+        const field = e.target.dataset.f;
+        // 处理复选框（布尔值）和数值输入
+        if (field === "applySmoothing") {
+          inv[field] = e.target.checked;
+        } else {
+          inv[field] = parseFloat(e.target.value);
+        }
         // @ts-ignore
-        if (e.target.dataset.f === "limit") {
+        if (field === "limit") {
           // @ts-ignore
           state.stats[key].intervals.sort((a, b) => a.limit - b.limit);
           renderStatCard(key);
@@ -518,6 +529,7 @@ function addInterval(k, lim, a2, a1, a0) {
     id: Date.now() + Math.random(),
     limit: lim,
     a2, a1, a0,
+    applySmoothing: true,  // 默认启用平滑修正
   });
   // @ts-ignore
   state.stats[k].intervals.sort((a, b) => a.limit - b.limit);
@@ -808,8 +820,8 @@ function openTrajectoryModal() {
     if (axisContainer) axisContainer.innerHTML = "";
 
     // MID Update: Sync with solver.js generateTrajectory range
-    const minB = 1000;
-    const maxB = 20000;
+    const minB = 0;
+    const maxB = 5000;
     const totalRange = maxB - minB;
     const uniquePhases = new Set();
 
@@ -943,8 +955,8 @@ function exportTrajectoryReport() {
     statsConfig[k] = {
       // @ts-ignore
       name: state.lang === "zh" ? conf.name_zh : conf.name_en,
-      base: conf.def_base,  // Use def_base from STAT_CONFIG
-      conv: conf.def_conv,
+      base: stat.basePct,  // Use actual basePct from state (user configured)
+      conv: stat.conv,      // Use actual conv from state (user configured)
       intervals: stat.intervals.map((inv) => ({
         limit: inv.limit,
         a2: inv.a2,
@@ -960,7 +972,7 @@ function exportTrajectoryReport() {
     subtitle: t.export_report_subtitle,
     timestamp: new Date().toLocaleString(state.lang === "zh" ? "zh-CN" : "en-US"),
     configNote,
-    budgetRange: { min: 1000, max: 20000, step: 200 },
+    budgetRange: { min: 0, max: 5000, step: 200 },
     statsConfig,
     trajData: { labels, d, phases, smoothScores: d.smoothScores },
     t,

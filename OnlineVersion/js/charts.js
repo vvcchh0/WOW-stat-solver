@@ -261,8 +261,9 @@ const ChartManager = {
    *
    * @param {Array<number>} labels - 横轴预算数据
    * @param {Object|Array<number>} scoresOrData - 如果是旧版调用则为 scores 数组，如果是新版则为包含 smoothScores 的对象
-   * 
-   * 注：延拓修正实现后，smoothScores 已弃用，scores 本身已足够平滑（因为最优分配已使用延拓修正）
+   *
+   * 注：smoothScores 现在根据各区间的 applySmoothing 配置计算，用于 Delta 图可视化
+   *     若后一区间的 applySmoothing=true，则跨越该断点时应用平滑修正
    */
   renderDeltaTrajChart(labels, scoresOrData) {
     const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("deltaTrajChart")).getContext("2d");

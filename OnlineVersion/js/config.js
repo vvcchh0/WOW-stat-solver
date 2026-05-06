@@ -120,6 +120,10 @@ const I18N = {
     config_note_label: "注释：",
     config_note_placeholder: "在此输入配置导入相关的注释内容 (支持 Markdown)...",
     add_interval_label: "添加区间",
+    // Smoothing
+    smoothing_checkbox: "平滑",
+    smoothing_origin: "起点",
+    smoothing_title: "平滑与前区间的断点跳变",
     // Export
     export_report_title: "绿字成长模拟报告",
     export_report_subtitle: "WoW Stat Solver - Growth Trajectory Report",
@@ -193,6 +197,10 @@ const I18N = {
     config_note_label: "Comment:",
     config_note_placeholder: "Enter comments about this configuration (Markdown supported)...",
     add_interval_label: "ADD TIER",
+    // Smoothing
+    smoothing_checkbox: "Smooth",
+    smoothing_origin: "Origin",
+    smoothing_title: "Smooth discontinuity with previous interval",
     // Export
     export_report_title: "Growth Trajectory Report",
     export_report_subtitle: "WoW Stat Solver - Growth Trajectory Report",

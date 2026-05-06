@@ -1,0 +1,202 @@
+# Base Actor
+# Eirodynoir - Balance - 2026-04-16 18:50 - CN/白银之手
+# SimC Addon 12.0.1-04
+# WoW 12.0.1.66838, TOC 120001
+# Requires SimulationCraft 1000-01 or newer
+
+druid="Eirodynoir"
+level=90
+race=night_elf
+region=cn
+server=白银之手
+role=spell
+professions=alchemy=25/mining=8
+spec=balance
+# loot_spec=balance
+
+talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWoMbNjxMD8AmlZmZmZBMMLzsM2mxM2YZmlxMDzCGGgBYZbshpZmlRAAAA2YmZmBbGGjZAMzAADA
+
+# Saved Loadout: 树（M3)
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgxsYmZmZBMMLzsMWmxM2YZmlxMDzCGGgBYZbshxMzyAAAAgNmZmZwmhxYGAzMAwA
+# Saved Loadout: h4
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgxsYmZmZBMMLzsM2mxMzGLzYMzMsghBYAW2GbYMzsMAAAAYjZmZGsZYMmBwMDAMA
+# Saved Loadout: PVP
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAziZMzMDMmNzMzMAY2mZbsNjZsYWmxMzMYBDDwAstM2wYmZbAAAAwmZmZmBbGDjZAMzAADA
+# Saved Loadout: 通用纯单
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgHwsMzMzMLghZZmlhZMjNWmZZmZGmFMMADwy2YDjZmlBAAAAbMzMzgNDjxMAmZAgB
+# Saved Loadout: h5
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZAmlZmZmZhhhxMLzsYmZsxyMLjZmZsghBYstNzstNzysNjZmlZAAAAYhZmZGsZYMGAAmZgB
+# Saved Loadout: h6
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZAmlZmZmZhhhZZmlxyMmxGLzsMmZYWwwAM22mZW2mZZ2mxMzyMAAAAsxMzMD2MMGzAYmBzMwA
+# Saved Loadout: 树（M4）
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgxsMzMzMADz2MLjtZMzsxyMGzMDLYYAGgttxGGzMLDAAAA2YmZmBbGGjZAMzAADA
+# Saved Loadout: 树（M1）
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgxsMzMzMADzyMLjtZMjNWmxMzMMLYYAGgltxGGzMLDAAAA2YmZmBbGDjZAMzAADA
+# Saved Loadout: 树（H8）
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgxsMzMzMADzyMbDzYGbsMjZmZMzGGGgBYZbshxMzyAAAAgNmZmZwmxwYGAzMAwA
+# Saved Loadout: 熊（大秘境）
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZAmFzMzMLMYMLzsMWMzM2YZmlZmZMWwwAMW2mZ22mZZ2mxMzyMAAAAsYmZmZwmhxYAAYmBGA
+# Saved Loadout: 树（M2）
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgxsMzMzMADzyMLDzYGbsMzyMzMMLYYAGgltxGGzMLDAAAA2YmZmBbGGjZAMzAADA
+# Saved Loadout: 树（M/H6）
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgHwsMzMzMLghZZmlx2MmxGLzsMmZYWwwAMALbjNMmZWGAAAAsxMzMD2MMGzAYmBAGA
+# Saved Loadout: 熊（M5）
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZAmlZmZmZhhhxMLzsYmZsxyMLjZmZsghBYssNzstNzysNjZmlZAAAAYhZmZGsZYMGAAmZgB
+# Saved Loadout: h3
+# talents=CYGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAAAAAAWAzmZMmZgxsYmZmZBMMLzsNMjZsxyMmZmxMbYYAGgltxGGzMLDAAAA2YmZmBbGGjZAMzAADA
+
+# 辉光芳华的枝角 (289)
+head=,id=250024,enchant_id=8017,bonus_id=6652/13335/12667/13338/13575/12806
+# 辉光芳华的种荚护肩 (276)
+shoulder=,id=250022,enchant_id=8001,bonus_id=13334/6652/12798/13340/13574/3161
+# 辉光芳华的主干护胸 (276)
+chest=,id=250027,enchant_id=7987,bonus_id=6652/12798/13440/13336/13575/3161
+# 辉光芳华的韧皮裹腿 (276)
+legs=,id=250023,enchant_id=7934,bonus_id=6652/12798/13339/13575/3161
+# 艾林先知的凝视 (276)
+trinket1=,id=249343,bonus_id=6652/13334/12798
+# 威厄高尔的最终凝视 (263)
+trinket2=,id=249346,bonus_id=6652/13333/12790
+
+### Gear from Bags
+#
+# 恶臭邪冠 (266)
+# head=,id=251177,bonus_id=12795/13440/6652/12667/13577/12699
+#
+# 盘绕恶意丝带 (256)
+# neck=,id=249337,gem_id=240876,bonus_id=6652/13668/13333/12788
+#
+# 新手争斗者的项链 (276)
+# neck=,id=266314,gem_id=240892,bonus_id=13447/12798
+#
+# 阿曼尼心弦吊坠 (253)
+# neck=,id=265739,gem_id=240896,bonus_id=6652/13668/12787
+#
+# 刚鳞大氅 (266)
+# back=,id=258575,bonus_id=12795/13440/6652/13577/12699
+#
+# 龙族虚无披风 (266)
+# back=,id=249370,bonus_id=6652/13577/13334/12795
+#
+# 流光织锦披风 (266)
+# back=,id=251206,bonus_id=12795/13440/6652/13577/12699
+#
+# 辉光芳华的主干护胸 (276)
+# chest=,id=250027,enchant_id=7987,bonus_id=12802/13335/13336/6652/13575
+#
+# 虚空皮制护腕 (289)
+# wrist=,id=249327,bonus_id=6652/12667/13577/13335/12806
+#
+# 辉光芳华的护林手套 (276)
+# hands=,id=250025,bonus_id=13334/13337/6652/13574/12798
+#
+# 虚空之触手套 (253)
+# hands=,id=151322,bonus_id=12787/6652/13577/12699/11215
+#
+# 黏性软泥手套 (276)
+# hands=,id=251113,bonus_id=13440/6652/13577/12699/12798
+#
+# 银月城特工的多功能腰带 (285)
+# waist=,id=244573,bonus_id=12214/12497/12066/8960/12384/8793/13622/13667/12667,crafted_stats=49/32,crafting_quality=5
+#
+# 影卫腰带 (253)
+# waist=,id=151327,bonus_id=12787/6652/12667/13577/12699/11215
+#
+# 炽燃焦点长靴 (289)
+# feet=,id=258577,enchant_id=7963,bonus_id=13440/6652/13577/12699/12806
+#
+# 渗透恐惧薄靴 (266)
+# feet=,id=151317,bonus_id=12795/13440/6652/13577/12699
+#
+# 圣光的遗落 (272)
+# finger1=,id=251093,enchant_id=7969,gem_id=240967,bonus_id=13440/40/13668/12699/12797
+#
+# 虚空的遮蔽 (266)
+# finger1=,id=251217,enchant_id=7969,gem_id=240900,bonus_id=12795/13440/6652/13668/12699
+#
+# 圣光的遗落 (266)
+# finger1=,id=251093,bonus_id=12795/13440/6652/13668/12699
+#
+# 异变能量坩埚 (263)
+# trinket1=,id=264507,bonus_id=12790
+#
+# 虚空收割者之契 (263)
+# trinket1=,id=251785,bonus_id=6652/12794
+#
+# 捕魂者的咒符 (263)
+# trinket1=,id=250223,bonus_id=12794/13440/6652/12699
+#
+# 风之心 (266)
+# trinket1=,id=250256,bonus_id=12795/13440/6652/12699
+#
+# 沉溺虚空之眼 (259)
+# trinket1=,id=250257,bonus_id=12793/13440/6652/12699
+#
+# 艾林哈籁手杖 (285)
+# main_hand=,id=245770,enchant_id=8039,bonus_id=12214/12497/12066/12693/8960/8793/13622/13667,crafted_stats=36/49,crafting_quality=5
+#
+# 狂怒构装体之杖 (266)
+# main_hand=,id=258047,bonus_id=12795/13440/43/12701
+#
+# 核闪多用仪 (266)
+# main_hand=,id=251201,bonus_id=12795/13440/6652/12701
+#
+# 维克萨姆斯的开除杖 (266)
+# off_hand=,id=193709,bonus_id=12795/13440/6652/12699
+#
+# 维克萨姆斯的开除杖 (285)
+# off_hand=,id=193709,bonus_id=13440/6652/12699/12805
+#
+# 鲁克兰的阳炎圣物 (266)
+# off_hand=,id=258472,bonus_id=12795/13440/6652/12699
+
+### Additional Character Info
+#
+# catalyst_currencies=3269:8/3378:8/2813:8/3116:8
+#
+# upgrade_currencies=c:3347:10/c:3383:100/c:3341:70/c:1792:1511/i:232875:1
+#
+# slot_high_watermarks=0:289:289/1:276:276/2:276:276/3:276:276/4:285:285/5:276:276/6:289:289/7:289:289/8:276:276/9:266:266/10:266:266/11:266:266/12:285:285/13:266:266/14:85:259/15:0:250/16:285:285
+#
+# upgrade_achievements=40942/40943/40944/40945/41886/41887/41888/41892/42767/42768/61809
+
+
+
+# Checksum: 329387b7
+name=Eirodynoir
+
+# Consumables
+
+# Expansion Options
+temporary_enchant=
+midnight.crucible_of_erratic_energies_violence=1
+midnight.crucible_of_erratic_energies_sustenance=0
+midnight.crucible_of_erratic_energies_predation=1
+
+# Actors
+
+# Custom Enemies
+enemy="Execute Range"
+enemy_initial_health_percentage=20
+
+# Simulation Options
+iterations=100000
+desired_targets=1
+max_time=300
+calculate_scale_factors=0
+scale_only=strength,intellect,agility,crit,mastery,vers,haste,weapon_dps,weapon_offhand_dps
+override.bloodlust=1
+override.arcane_intellect=1
+override.power_word_fortitude=1
+override.battle_shout=1
+override.mystic_touch=1
+override.chaos_brand=1
+override.skyfury=1
+override.mark_of_the_wild=1
+override.hunters_mark=1
+override.bleeding=1
+report_details=1
+single_actor_batch=1
+optimize_expressions=1
+target_error=0.1
+dps_plot_positive=1

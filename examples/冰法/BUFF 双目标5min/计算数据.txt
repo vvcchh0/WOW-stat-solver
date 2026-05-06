@@ -1,0 +1,89 @@
+#comments:
+#  # 冰法 团本天赋，满BUFF 双目标5分钟
+#  ## 相对误差0.3%，Patchwerk
+#  ## 四件套，带H蓝眼，M黄眼
+
+Critical Strike:
+{
+SPEC BASE = 7
+RATING/1% = 46
+STAT BASE RATING = 160
+INTERVAL1
+{
+RANGEMAX = 1220
+a2 = 0
+a1 = 0.000255
+a0 = 0.9975
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.0002508
+a0 = 1.001
+APPLY_SMOOTHING = true
+}
+}
+
+Haste:
+{
+SPEC BASE = 6.11
+RATING/1% = 44
+STAT BASE RATING = 287
+INTERVAL1
+{
+RANGEMAX = 1030
+a2 = 0
+a1 = 0.0002021
+a0 = 1.003
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1470
+a2 = 0
+a1 = 0.0001704
+a0 = 1.035
+APPLY_SMOOTHING = true
+}
+}
+
+Mastery:
+{
+SPEC BASE = 17.6
+RATING/1% = 28.75
+STAT BASE RATING = 194
+INTERVAL1
+{
+RANGEMAX = 1190
+a2 = 0
+a1 = 0.0002443
+a0 = 1.003
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.0002159
+a0 = 1.036
+APPLY_SMOOTHING = true
+}
+}
+
+Versatility:
+{
+SPEC BASE = 0
+RATING/1% = 54
+STAT BASE RATING = 40
+INTERVAL1
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.0001784
+a0 = 1.002
+APPLY_SMOOTHING = true
+}
+}
+
