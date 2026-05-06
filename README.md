@@ -1,6 +1,7 @@
 # WoW Stat Solver
 
 魔兽世界绿字最优分配求解器 | WoW Secondary Stat Optimization Solver
+
 补充：教程暂时没空出，后面空了应该会出一期。欢迎补充更多专精在更多模拟条件下的案例。
 
 ---
