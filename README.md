@@ -13,7 +13,7 @@ WoW Stat Solver 使用贪心算法和 SimC 拟合数据，求解魔兽世界 DPS
 - **贪心算法**：基于等边际收益原理，迭代求解全局最优解
 - **SimC 集成**：直接导入 SimulationCraft `dps_plot` 数据，自动分段多项式拟合（线性 R² >= 0.99 或二次）
 - **递减机制**：完整实现暴雪官方的 DR 阈值（30%/40%/50%/60%/80% 档位，效率 100%/90%/80%/70%/60%/50%）
-- **成长轨迹**：扫描预算 5000 至 60000，显示各阶段最优策略（单修/双修/混合）
+- **成长轨迹**：扫描预算 0 至 5000，显示各阶段最优策略（单修/双修/混合）
 - **可视化**：四张交互式 Chart.js 图表（分配数值、面板百分比、总收益、边际收益 Delta）
 - **隐私保护**：纯客户端运行，无服务器通信
 
@@ -111,7 +111,7 @@ D = D₀ × C(c) × H(h) × M(m) × V(v)
 
 - `冰法/` - 冰霜法师
 - `鸟德/` - 平衡德鲁伊
-- `湮灭/` - 湮灭恶魔猎手
+- `湮灭/` - 湮灭唤魔师
 
 每个目录包含示例配置文件和 SimC 字符串。
 
@@ -155,7 +155,7 @@ WoW Stat Solver calculates optimal secondary stat distributions (Critical Strike
 - **Greedy Algorithm**: Iteratively allocates stat points to the highest marginal gain, converging to global optimum under diminishing returns
 - **SimC Integration**: Import `dps_plot` data from SimulationCraft with automatic piecewise fitting (linear R² >= 0.99 or quadratic)
 - **Diminishing Returns**: Full implementation of Blizzard's DR tiers (30%/40%/50%/60%/80% thresholds with 100%/90%/80%/70%/60%/50% efficiency)
-- **Growth Trajectory**: Scan budgets from 5000 to 60000 rating, displaying optimal strategies per phase (single-stat/dual-stat/hybrid)
+- **Growth Trajectory**: Scan budgets from 0 to 5000 rating, displaying optimal strategies per phase (single-stat/dual-stat/hybrid)
 - **Visualization**: Four interactive Chart.js charts (rating allocation, panel percentages, total yield, marginal gain delta)
 - **Privacy**: Runs entirely client-side, no server communication
 
@@ -231,7 +231,7 @@ Check `examples/` for pre-configured specs:
 
 - `冰法/` - Frost Mage
 - `鸟德/` - Balance Druid
-- `湮灭/` - Annihilation DH
+- `湮灭/` - Devastation Evoker
 
 Each directory contains sample config files with SimC strings.
 
