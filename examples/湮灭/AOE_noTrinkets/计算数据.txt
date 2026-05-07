@@ -1,0 +1,89 @@
+#comments:
+#  # 湮灭 AOE天赋，无BUFF 5目标3分钟
+#  ## 相对误差0.3%，Patchwerk
+#  ## 四件套，无双凝视
+
+Critical Strike:
+{
+SPEC BASE = 5
+RATING/1% = 46
+STAT BASE RATING = 192
+INTERVAL1
+{
+RANGEMAX = 1190
+a2 = 0
+a1 = 0.0002443
+a0 = 0.9991
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.0002181
+a0 = 1.03
+APPLY_SMOOTHING = true
+}
+}
+
+Haste:
+{
+SPEC BASE = 0
+RATING/1% = 44
+STAT BASE RATING = 183
+INTERVAL1
+{
+RANGEMAX = 1140
+a2 = 0
+a1 = 0.0001653
+a0 = 0.9951
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.00009746
+a0 = 1.073
+APPLY_SMOOTHING = true
+}
+}
+
+Mastery:
+{
+SPEC BASE = 13.5
+RATING/1% = 30.66
+STAT BASE RATING = 269
+INTERVAL1
+{
+RANGEMAX = 1110
+a2 = 0
+a1 = 0.0001889
+a0 = 1
+APPLY_SMOOTHING = true
+}
+INTERVAL2
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.000174
+a0 = 1.018
+APPLY_SMOOTHING = true
+}
+}
+
+Versatility:
+{
+SPEC BASE = 0
+RATING/1% = 54
+STAT BASE RATING = 40
+INTERVAL1
+{
+RANGEMAX = 1500
+a2 = 0
+a1 = 0.0001736
+a0 = 1
+APPLY_SMOOTHING = true
+}
+}
+
