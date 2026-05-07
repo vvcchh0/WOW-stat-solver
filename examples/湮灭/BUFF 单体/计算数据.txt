@@ -1,7 +1,7 @@
 #comments:
-#  # 鳞长湮灭 AOE天赋，无BUFF 5目标3分钟
+#  # 鳞长湮灭 团本顺劈天赋，满BUFF 单目标5分钟
 #  ## 相对误差0.3%，Patchwerk
-#  ## 四件套，带M黄眼，H蓝眼
+#  ## 四件套，双凝视
 
 Critical Strike:
 {
@@ -12,7 +12,7 @@ INTERVAL1
 {
 RANGEMAX = 1190
 a2 = 0
-a1 = 0.0002281
+a1 = 0.0002291
 a0 = 1.001
 APPLY_SMOOTHING = true
 }
@@ -20,8 +20,8 @@ INTERVAL2
 {
 RANGEMAX = 1500
 a2 = 0
-a1 = 0.0002074
-a0 = 1.023
+a1 = 0.0002066
+a0 = 1.025
 APPLY_SMOOTHING = true
 }
 }
@@ -35,16 +35,16 @@ INTERVAL1
 {
 RANGEMAX = 1140
 a2 = 0
-a1 = 0.0001875
-a0 = 0.9956
+a1 = 0.0001893
+a0 = 1.002
 APPLY_SMOOTHING = true
 }
 INTERVAL2
 {
 RANGEMAX = 1500
 a2 = 0
-a1 = 0.0001562
-a0 = 1.037
+a1 = 0.0001077
+a0 = 1.093
 APPLY_SMOOTHING = true
 }
 }
@@ -58,7 +58,7 @@ INTERVAL1
 {
 RANGEMAX = 1110
 a2 = 0
-a1 = 0.00018
+a1 = 0.0001621
 a0 = 1.001
 APPLY_SMOOTHING = true
 }
@@ -66,8 +66,8 @@ INTERVAL2
 {
 RANGEMAX = 1500
 a2 = 0
-a1 = 0.0001587
-a0 = 1.024
+a1 = 0.0001422
+a0 = 1.022
 APPLY_SMOOTHING = true
 }
 }
@@ -81,8 +81,8 @@ INTERVAL1
 {
 RANGEMAX = 1500
 a2 = 0
-a1 = 0.0001741
-a0 = 1.001
+a1 = 0.0001548
+a0 = 1
 APPLY_SMOOTHING = true
 }
 }

@@ -1,5 +1,5 @@
 #comments:
-#  # 湮灭 AOE天赋，无BUFF 5目标3分钟
+#  # 鳞长湮灭 AOE天赋，无BUFF 5目标3分钟
 #  ## 相对误差0.3%，Patchwerk
 #  ## 四件套，无双凝视
 
